@@ -1,0 +1,243 @@
+:root {
+  --bg: #d4eef8;
+  --bg-deep: #a8d8ec;
+  --line: #5ba8c9;
+  --line-faint: rgba(91, 168, 201, 0.45);
+  --text: #1a4a5e;
+  --text-muted: #3d7288;
+  --surface: rgba(255, 255, 255, 0.55);
+  --surface-border: rgba(91, 168, 201, 0.5);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Inter", "Noto Sans JP", sans-serif;
+  color: var(--text);
+  background: linear-gradient(160deg, var(--bg) 0%, #c5e8f5 40%, var(--bg-deep) 100%);
+  overflow-x: hidden;
+}
+
+/* 建築ブループリント背景 */
+.blueprint-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  color: var(--line);
+  opacity: 0.55;
+}
+
+.blueprint-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.skeleton-lines {
+  opacity: 0.85;
+}
+
+/* コンテンツ */
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 1.5rem 2rem;
+}
+
+.site-title {
+  width: 100%;
+  text-align: center;
+  padding-top: 2rem;
+  margin-bottom: 4rem;
+}
+
+.title-pop {
+  font-family: "Fredoka", sans-serif;
+  font-size: clamp(3.6rem, 11vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+.title-letter {
+  display: inline-block;
+  color: #ffffff;
+  text-shadow:
+    3px 3px 0 #2a8fb8,
+    4px 4px 0 #1a6a8a,
+    0 0 20px rgba(255, 255, 255, 0.4);
+  animation: letter-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: calc(var(--i) * 0.08s);
+}
+
+.title-letter:nth-child(odd) {
+  color: #f0fbff;
+}
+
+@keyframes letter-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-12deg) translateY(2rem);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.18) rotate(4deg) translateY(-0.4rem);
+  }
+  80% {
+    transform: scale(0.95) rotate(-2deg) translateY(0.1rem);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-letter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* News */
+.news {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  padding: 1.75rem 2rem;
+  backdrop-filter: blur(6px);
+}
+
+.news h2 {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.news-list {
+  list-style: none;
+}
+
+.news-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.news-list time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.news-list span {
+  color: var(--text);
+}
+
+/* フッター */
+.site-footer {
+  margin-top: auto;
+  padding-top: 4rem;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* メール */
+.contact {
+  width: 100%;
+}
+
+.contact-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(26, 74, 94, 0.08);
+  text-decoration: none;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.contact-panel:hover {
+  border-color: var(--line);
+  box-shadow: 0 4px 16px rgba(26, 74, 94, 0.12);
+}
+
+.contact-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--line);
+}
+
+.contact-icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.contact-address {
+  font-size: 0.95rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  word-break: break-all;
+}
+
+.copyright {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .site-title {
+    padding-top: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .news {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .news-list li {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
