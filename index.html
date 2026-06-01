@@ -96,15 +96,25 @@
               <h3 class="product-name">CaddyFile V2</h3>
               <a class="product-link" href="https://minamite.booth.pm/items/8436925" target="_blank" rel="noopener noreferrer">BOOTH で購入</a>
             </div>
-            <figure class="product-screenshot">
-              <img src="images/caddyfile-v2.png" alt="CaddyFile V2 の操作画面" width="640" height="400" loading="lazy">
-            </figure>
+            <div class="product-screenshots">
+              <figure class="product-screenshot">
+                <button type="button" class="screenshot-open" aria-label="CaddyFile V2 の操作画面を拡大表示">
+                  <img src="images/caddyfile-v2.png" alt="CaddyFile V2 の操作画面" width="640" height="400" loading="lazy">
+                </button>
+              </figure>
+              <figure class="product-screenshot">
+                <button type="button" class="screenshot-open" aria-label="CaddyFile V2 の照合画面を拡大表示">
+                  <img src="images/caddyfile-v2-verify.png" alt="CaddyFile V2 の照合画面" width="640" height="400" loading="lazy">
+                </button>
+              </figure>
+            </div>
             <div class="product-body">
               <div class="product-desc">
                 <p>Windows 向けフォルダ同期ツール。同期設定は最大24件。一括同期に対応し、上書きの有無を切り替え可能。</p>
                 <p>上書きありの場合、上書き対象ファイルはいったんゴミ箱へ移動してから同期します。ゴミ箱への移動に失敗した場合は、そのファイルの処理を中断し、データ損失を防ぎます。必要に応じてゴミ箱からデータを復元できます。</p>
                 <p class="product-note">※動作環境によっては、復元を保証できない場合があります。</p>
                 <p>上書きなしの場合、同名ファイルは転送しません。同名以外のファイルのみ転送します。</p>
+                <p>照合は指定フォルダ内のファイル及びサブフォルダ内のファイルの日付とサイズを照合します。</p>
                 <p>進捗表示付き。日本語・英語に対応。Windows 10 / 11（64bit）、.NET 10 以降で動作。軽快な操作感を目指しています。</p>
               </div>
             </div>
@@ -129,5 +139,12 @@
       <p class="copyright">Copyright © 1999 MinamiTekuno. All rights reserved.</p>
     </footer>
   </div>
+
+  <dialog class="lightbox" id="screenshot-lightbox" aria-label="画面拡大表示">
+    <button type="button" class="lightbox-close" aria-label="閉じる">×</button>
+    <img class="lightbox-image" src="" alt="">
+  </dialog>
+
+  <script src="js/lightbox.js"></script>
 </body>
 </html>
