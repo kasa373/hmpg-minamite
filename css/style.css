@@ -501,6 +501,53 @@ main {
   word-break: break-all;
 }
 
+.site-qr {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.site-qr-link {
+  display: block;
+  padding: 0.5rem;
+  background: #ffffff;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(26, 74, 94, 0.08);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.site-qr-link:hover {
+  border-color: var(--line);
+  box-shadow: 0 4px 16px rgba(26, 74, 94, 0.12);
+}
+
+.site-qr img {
+  display: block;
+  width: 100px;
+  height: 100px;
+}
+
+.site-qr figcaption {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-align: center;
+  word-break: break-all;
+}
+
+.site-qr figcaption a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-qr figcaption a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 .brand-note {
   font-size: 0.78rem;
   color: var(--text-muted);
