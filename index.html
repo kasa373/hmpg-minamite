@@ -83,6 +83,10 @@
         <h2>News</h2>
         <ul class="news-list">
           <li>
+            <time datetime="2026-06-08">2026/6/8</time>
+            <span>おっとかぶ Android版 Ver1.0.3 公開</span>
+          </li>
+          <li>
             <time datetime="2026-06-07">2026/6/7</time>
             <span>おっとかぶ リリース</span>
           </li>
@@ -158,7 +162,10 @@
           <article class="product-row">
             <div class="product-aside">
               <h3 class="product-name">おっとかぶ</h3>
-              <a class="product-link" href="https://minamite.booth.pm/items/8479773" target="_blank" rel="noopener noreferrer">BOOTH で入手</a>
+              <div class="product-links">
+                <a class="product-link" href="https://minamite.booth.pm/items/8479773" target="_blank" rel="noopener noreferrer">BOOTH で入手</a>
+                <a class="product-link product-link-dl" id="ottokabu-android-dl" href="https://github.com/kasa373/hmpg-minamite/releases/download/v1.0.3/ottocab_v1.0.3.apk">Android版 DL</a>
+              </div>
             </div>
             <div class="product-screenshots">
               <figure class="product-screenshot">
@@ -174,9 +181,10 @@
             </div>
             <div class="product-body">
               <div class="product-desc">
-                <p>Windows 向け算数パズルゲーム。4つの数字と3つの演算子（＋ − × ÷）で式を作り、計算結果の一の位を9にしてください。× ÷ は ＋ − より先に計算されます。</p>
-                <p>インターバル（1問30秒）、タイムトライアル（1分間）、テクニカル（5分間・回答ミス即終了）の3モード。数字はドラッグで並べ替え、演算子はクリックで選択。Answer で回答、Pass でパス（解なしのときのみ）できます。</p>
-                <p>ハイスコア記録付き。日本語・英語に対応。Windows 10 / 11（64bit）で動作。</p>
+                <p>算数パズルゲーム。4つの数字と3つの演算子（＋ − × ÷）で式を作り、計算結果の一の位を9にしてください。× ÷ は ＋ − より先に計算されます。</p>
+                <p>インターバル（1問30秒）、タイムトライアル（1分間）、テクニカル（5分間・回答ミス即終了）の3モード。数字はドラッグで並べ替え、演算子はタップで選択。Answer で回答、Pass でパス（解なしのときのみ）できます。</p>
+                <p>ハイスコア記録付き。日本語・英語に対応。Windows 10 / 11（64bit）は BOOTH 版、Android 8.0 以降は GitHub Releases から APK（Ver1.0.3）をダウンロードしてインストールできます。</p>
+                <p class="product-note">Android版のインストール：APK をダウンロード後、端末の設定で「提供元不明のアプリ」のインストールを許可し、ファイルを開いてインストールしてください。Google Play 版ではありません。</p>
               </div>
             </div>
           </article>
@@ -206,6 +214,21 @@
     <img class="lightbox-image" src="" alt="">
   </dialog>
 
+  <dialog class="download-dialog" id="ottokabu-android-dialog" aria-labelledby="ottokabu-android-dialog-title">
+    <div class="download-dialog-panel">
+      <h2 class="download-dialog-title" id="ottokabu-android-dialog-title">おっとかぶ Android版</h2>
+      <div class="download-dialog-body">
+        <p>Ver1.0.3（Android 8.0 以降）をダウンロードします。</p>
+        <p>Google Play 版ではありません。APK 取得後、端末の設定で「提供元不明のアプリ」のインストールを許可し、ファイルを開いてインストールしてください。</p>
+      </div>
+      <div class="download-dialog-actions">
+        <button type="button" class="download-dialog-cancel">キャンセル</button>
+        <button type="button" class="download-dialog-confirm">ダウンロード</button>
+      </div>
+    </div>
+  </dialog>
+
   <script src="js/lightbox.js"></script>
+  <script src="js/download-confirm.js"></script>
 </body>
 </html>
