@@ -355,7 +355,6 @@ main {
   border-color: var(--line);
   box-shadow: 0 4px 16px rgba(26, 74, 94, 0.12);
 }
-
 /* フッター */
 .site-footer {
   margin-top: auto;
