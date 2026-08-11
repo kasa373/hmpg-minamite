@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>CadartKeys 説明書</title>
+<style>
+body{font-family:"Yu Gothic UI",Meiryo,sans-serif;line-height:1.7;max-width:900px;margin:32px auto;padding:0 20px;color:#243b53}
+h1{border-bottom:3px solid #2AA8A0;color:#1a3a3a}
+h2{margin-top:2em;color:#1E8A84}
+code{background:#eef3f7;padding:2px 5px}
+li{margin:.35em 0}
+pre{background:#f5f7fa;padding:12px 14px;overflow:auto;border:1px solid #d9e2ec;border-radius:4px}
+footer{margin-top:3em;padding-top:1em;border-top:1px solid #d9e2ec;color:#486581;font-size:.92em}
+</style>
+</head><body>
+<h1>CadartKeys 説明書</h1>
+<p>CadartKeys は minamite の<strong>ログインID・パスワード管理</strong>アプリです。キーグループごとに名称・ユーザーID・メール・パスワードなどを整理して保管します。</p>
+
+<h2>はじめかた</h2>
+<ol>
+<li>初回起動時は <strong>新規作成</strong>／<strong>既存を開く</strong>／キャンセル（終了）から選びます。新規作成は既定の場所（ProgramData\minamite）または指定した親の下に <code>CadartKeys01</code>〜<code>99</code> を自動採番します。</li>
+<li><strong>暗号化パスワード</strong>を設定（新規）または入力（既存）します。<strong>パスワードを忘れるとデータを開けなくなります</strong>（復元手段はありません）。</li>
+<li>「グループ → 新規」でキーグループを作成します。</li>
+<li>「編集 → 新規（追加）」でキーを登録します。</li>
+</ol>
+<p>すでに起動しているときに再度開こうとすると「すでに起動しています。」と表示して終了します。</p>
+
+<h2>メニュー構成</h2>
+<ul>
+<li>上段: <strong>グループ／表示／検索／ツール／ヘルプ</strong></li>
+<li>右ペイン: <strong>編集</strong>（新規・修正・削除・グループ間移動・EXCELから取込）／<strong>一括変更</strong>（メモ１・メモ２）</li>
+</ul>
+
+<h2>キーグループ</h2>
+<ul>
+<li>左ペイン見出しの既定は「キーグループ」です。ダブルクリックでデータセットタイトル（最大32文字）を変更できます。</li>
+<li>「グループ順番入れ替えモード」でドラッグ並べ替えができます。</li>
+<li>ツリー表示では、グループ名の空白区切りで階層表示します。枝を選んで Space で全展開／全閉じを切り替えます。</li>
+</ul>
+
+<h2>キーの操作</h2>
+<ul>
+<li>項目: 名称／ユーザーID／メールアドレス／パスワード／シリアルNo／会社／氏名／メモ１／メモ２／URL／金額／日付。</li>
+<li>一覧のパスワードは常に <code>***</code> で表示します（空のときは空欄）。</li>
+<li>編集画面では「表示／隠す」でパスワードの表示を切り替えられます。</li>
+<li>URL には <code>http(s)://</code> またはファイル／フォルダのパスを入れます。右ペインツールバーの <strong>url</strong> アイコンで開きます（URL→ブラウザ、ファイル→関連付け）。</li>
+<li>「EXCELから取込」は Excel でコピーした内容を<strong>クリップボード</strong>から選択中グループへ一括追加します。列順は <strong>名称／ユーザーID／メアド／パスワード／シリアル／会社／氏名／メモ１／メモ２／URL／金額／日付</strong>。CODE は空きの若い番号から自動採番します。</li>
+<li>「一括変更」はメモ１／メモ２のみです。</li>
+<li>削除（グループ／キー）では、基本設定の<strong>セキュリティパスワード</strong>（設定時）を確認します。</li>
+</ul>
+
+<h2>検索</h2>
+<ul>
+<li>名称・ユーザーID・メール・シリアル・会社・氏名・メモ１・メモ２・URL を対象にします（パスワード本文は検索しません）。</li>
+<li><code>|</code> で OR 検索できます。結果は別ウィンドウです。</li>
+</ul>
+
+<h2>暗号化とバックアップ</h2>
+<pre>CadartKeys01/
+├─ dataset-title.txt
+└─ cadartSqlite/cadartkeys.sqlite   （暗号化）</pre>
+<ul>
+<li>データベースはユーザーが決めた暗号化パスワードで保護されます。</li>
+<li>次の操作では<strong>暗号化パスワード</strong>の入力が必要です: 相手PCから取り込む（同期）／バックアップを作る／バックアップから戻す／別の場所へデータを移して使う／場所を変える。新規作成では新しいパスワードを設定します。</li>
+<li>「ツール → 相手PCから取り込む（同期）…」は、相手の <code>CadartKeys##</code> フォルダまたは zip を選び、自分に無い／相手の方が新しいキーだけ取り込みます。差分プレビュー（追加・更新・取込不可）のあと実行します。相手データの暗号化パスワードが必要です。同じコードで自分の方が新しい、または同じ更新日時で内容が違う場合は取込不可となり、相手側でコードを変えてから取り込み直す必要があります。</li>
+<li>セキュリティパスワード（基本設定）とは別物です。削除系はセキュリティパスワード、バックアップ等は暗号化パスワードです。</li>
+</ul>
+
+<h2>基本設定</h2>
+<ul>
+<li>表示の大きさ、左ペイン（リスト／ツリー）、ツリー初期展開段、メインツールバー、件数表示</li>
+<li>セキュリティパスワード（削除などの確認用。空なら確認なし）</li>
+</ul>
+
+<footer>CadartKeys ／ minamite</footer>
+</body></html>
