@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>CadartDrawings 説明書</title>
+<style>
+body{font-family:"Yu Gothic UI",Meiryo,sans-serif;line-height:1.7;max-width:900px;margin:32px auto;padding:0 20px;color:#243b53}
+h1{border-bottom:3px solid #2AA8A0;color:#1a3a3a}
+h2{margin-top:2em;color:#1E8A84}
+code{background:#eef3f7;padding:2px 5px}
+li{margin:.35em 0}
+pre{background:#f5f7fa;padding:12px 14px;overflow:auto;border:1px solid #d9e2ec;border-radius:4px}
+figure{margin:1.2em 0 1.6em;padding:0}
+figure img{display:block;max-width:100%;height:auto;border:1px solid #d9e2ec;border-radius:4px;box-shadow:0 1px 4px rgba(36,59,83,.12)}
+figcaption{margin-top:.45em;font-size:.92em;color:#486581}
+footer{margin-top:3em;padding-top:1em;border-top:1px solid #d9e2ec;color:#486581;font-size:.92em}
+</style>
+</head><body>
+<h1>CadartDrawings 説明書</h1>
+<p>CadartDrawings は minamite の<strong>パーツ（部品・図面）カタログ</strong>アプリです。グループごとにパーツを整理し、図面・資料・メモと紐づけて管理します。</p>
+
+<figure>
+<img src="img-main.png" alt="メイン画面（ツリーとパーツ一覧）">
+<figcaption>メイン画面の例。上段メニューの下にメインツールバー、左がパーツグループ（ツリー。先頭に ■stage／■inbox）、右がパーツメニュー（編集／モード／一括変更／外部アプリ）とその下のパーツツールバー・一覧です。</figcaption>
+</figure>
+
+<h2>はじめかた</h2>
+<ol>
+<li>初回起動時は <strong>新規作成</strong>／<strong>既存を開く</strong>／キャンセル（終了）から選びます。新規作成は既定の場所（ProgramData\minamite）または指定した親の下に <code>CadartDrawings01</code>〜<code>99</code> を自動採番します。</li>
+<li>「グループ → 新規」でパーツグループを作成します（空白区切りで最大12段・128文字）。</li>
+<li>「inbox → inboxへ取込…」で図面などのファイルを取り込み、あとからグループ間移動で本グループへ移すか、「編集 → 新規（追加）」で直接登録します。</li>
+</ol>
+<p>すでに起動しているときに再度開こうとすると「すでに起動しています。」と表示して終了します（二重起動はできません）。</p>
+
+<h2>メニュー構成</h2>
+<ul>
+<li>上段メニューの順は <strong>グループ／表示／検索／データ／inbox／ツール／ヘルプ／終了</strong> です。</li>
+<li>右ペイン上部にはパーツ用の <strong>編集／モード／一括変更／外部アプリ</strong> があります。</li>
+<li>右ペインのツールバーには、新規・修正・削除・グループ間移動・セル選択・コピー・外部アプリを開く・<strong>stage へ up</strong> があります。</li>
+</ul>
+
+<h2>グループ</h2>
+<ul>
+<li>左ペイン上部の見出し（既定「パーツグループ」）をダブルクリックすると、データセットのタイトル（最大32文字）を変更できます。タイトルバーにもタイトル・バージョン・データフォルダパスを表示します。</li>
+<li>一覧の<strong>いちばん上</strong>に <strong>■stage</strong>（閲覧リスト）、その下に <strong>■inbox</strong>（取込待機）を表示します。</li>
+<li><strong>■inbox</strong> は修正・削除できません。最大約 50 万件まで待機できます（内部スロット）。「inbox → inboxへ取込…」でファイルを複数選択して取り込みます（拡張子制限なし。1ファイル＝1パーツ。元ファイルは削除しません）。</li>
+<li>ユーザーグループの CODE は <strong>2000〜89999</strong>（画面では変更できません）。</li>
+<li>「グループ → グループ順番入れ替えモードON」でドラッグ＆ドロップ並べ替えができます。ON中は左ペイン外周に枠が付き、カーソルが手の形になります。<strong>■stage</strong> と <strong>■inbox</strong> は並べ替えできません。</li>
+<li>ツリー表示では、グループ名の空白区切りで階層表示します。枝（子があるノード）を選んで <strong>Space</strong> を押すと、その枝配下の全展開／全閉じを切り替えます（葉では何もしません）。実グループでない中間の枝を選ぶとパーツ一覧は空になります。</li>
+<li>左ペインのリスト／ツリーは「表示」で切り替えます（終了時に記憶。初回の既定はツリー）。<strong>件数表示</strong>をオンにするとグループ名の後ろに件数を付けます（0件は出しません）。</li>
+<li>左ペインを右クリックすると、グループ名での<strong>絞り込み</strong>／解除／履歴が使えます。</li>
+</ul>
+
+<h2>stage（閲覧リスト）</h2>
+<ul>
+<li>パーツを選んでツールバーの <strong>stg/up</strong>（stage へ up）を押すと、<strong>■stage</strong> に参照として追加します（本体は元のグループのまま。ファイルは移動しません）。</li>
+<li>up しても<strong>いま見ているグループの選択と一覧はそのまま</strong>なので、続けて別のパーツを up できます。</li>
+<li>■stage を開くと、up したパーツの一覧です。ドラッグ＆ドロップで順番を入れ替えられます。</li>
+<li>■stage 上の「削除」は <strong>stage から外す</strong>だけです（パーツ本体や図面ファイルは消しません）。</li>
+<li>■stage 表示中は、新規・修正・一括変更・グループ間移動・up は使えません。</li>
+</ul>
+
+<h2>パーツの操作</h2>
+<ul>
+<li>1グループあたり最大 <strong>99999</strong> 件まで登録できます（表示例: <code>2000-00001</code>）。</li>
+<li>「編集 → 新規（追加）」／「修正」でパーツ情報を編集します。項目は名称・型式・メーカー・図面・資料・金額・原価・メモ１・メモ２・日付です。</li>
+<li>図面／資料はダイアログからファイルを取り込めます（通常は <code>draw</code>／<code>doc</code>、inbox グループでは図面は <code>inbox</code>）。メモ１・２はパスや URL などの<strong>記録のみ</strong>です（ファイル取込はしません）。</li>
+<li>「編集 → 削除」で登録を消します（図面ファイルは残します。セキュリティパスワードを設定しているときは確認があります）。</li>
+<li>「編集 → グループ間移動」を ON にすると、一覧から左のグループへドラッグして移せます（一度に最大1000件）。inbox との間は図面ファイルも移動します。<strong>■stage へのドロップ移動はできません</strong>（stg/up を使ってください）。</li>
+<li>「モード → セル選択切り替え」で、行選択とセル選択を切り替えます。「セルコピー」（Ctrl+C）で表形式（タブ区切り）をクリップボードへコピーします。</li>
+<li>「一括変更」は <strong>メモ１／メモ２</strong>のみです。</li>
+<li>「外部アプリ」またはツールバー／ショートカットで開きます。<strong>図面 F5／資料 F6／メモ１ F7／メモ２ F8</strong>。ファイルは関連付けアプリ、フォルダはエクスプローラー、http(s) はブラウザ、メールはメーラーです。型式・名称の web 検索（Google）もあります。</li>
+<li>一覧のダブルクリックで修正します（■stage では開きません）。</li>
+</ul>
+
+<figure>
+<img src="img-part-edit.png" alt="パーツ修正ダイアログ">
+<figcaption>パーツ修正の例。図面／資料は「…」でファイル取込。メモ1 はファイルまたはフォルダのパスを記録するだけで取込しません。</figcaption>
+</figure>
+
+<h2>基本設定</h2>
+<p>「ツール → 基本設定」で次を設定します。</p>
+
+<figure>
+<img src="img-basic-settings.png" alt="基本設定ダイアログ">
+<figcaption>基本設定の例。表示の大きさ、左ペイン（リスト／ツリー）、ツリー初期展開段、メインツールバー、件数表示、セキュリティパスワードなどを設定します。</figcaption>
+</figure>
+
+<ul>
+<li><strong>表示の大きさ</strong> … グループ／リストを小・中・大</li>
+<li><strong>左ペイン初期表示</strong> … リスト／ツリー</li>
+<li><strong>ツリー初期展開段</strong> … 1〜12（既定4）。起動時と表示更新のときに反映</li>
+<li><strong>メインツールバーを表示</strong> … 上段アイコンバーの表示／非表示</li>
+<li><strong>件数表示</strong></li>
+<li><strong>セキュリティパスワード</strong> … 設定すると削除・復元などの操作で確認します。空のときは確認をスキップします</li>
+</ul>
+
+<h2>検索</h2>
+<ul>
+<li>上段の「検索」で、名称・型式・メーカー・メモ１・メモ２のいずれかを含む文字で探せます。</li>
+<li>検索文字に <code>|</code> を入れると OR です（例: <code>ボルト|ナット</code>）。</li>
+<li>結果は別ウィンドウで開きます（編集・外部アプリ・一括変更・セルコピーが使えます）。</li>
+</ul>
+
+<h2>データ</h2>
+<p>データフォルダ名は <code>CadartDrawings01</code>〜<code>CadartDrawings99</code> です（番号なしの旧 <code>CadartDrawings</code> も開けます）。</p>
+<pre>CadartDrawings01/
+├─ dataset-title.txt                  任意（表示タイトル）
+├─ stage.json                         stage リスト
+├─ cadartSqlite/cadartdrawings.sqlite 暗号化データベース
+├─ draw/                              通常グループの図面
+├─ doc/                               資料
+└─ inbox/                             取込待機（■inbox）</pre>
+<p>データベースは暗号化されますが、パスワードはアプリ内部固定のためユーザー操作は不要です。データフォルダの場所はタイトルバーに表示します。</p>
+<ul>
+<li>「データ」メニューから、図面／資料／inbox フォルダをエクスプローラーで開けます。</li>
+<li>「未使用ファイルを表示」「不在ファイルを表示」で、登録と実ファイルのずれを確認できます。未使用はゴミ箱へ移すか、指定フォルダへ退避できます。</li>
+<li>「グループ内図面重複チェック」「全図面重複チェック」は、図面ファイル名と容量が一致する候補を一覧します（自動削除はしません）。</li>
+</ul>
+
+    <h2>バックアップ・引っ越し・切り替え・新規作成</h2>
+    <ul>
+    <li>「ツール → 相手PCから取り込む…」は、相手の <code>CadartDrawings##</code> フォルダまたは zip を選び、自分に無い／相手の方が新しいパーツだけ取り込みます。差分プレビュー（追加・更新・取込不可）のあと実行します。パスワード入力は不要です。同じコードで自分の方が新しい、または同じ更新日時で内容が違う場合は取込不可となり、相手側でコードを変えてから取り込み直す必要があります。</li>
+    <li>「ツール → バックアップを作る（コピーして保管）」は、データベースと <code>draw</code>／<code>doc</code>／<code>inbox</code>／タイトル／stage をタイムスタンプ付きフォルダへコピーします。</li>
+    <li>「ツール → バックアップから戻す」は、現在のデータをゴミ箱へ移動してから書き戻します。実行前にバックアップしてください。</li>
+    <li>「ツール → 別の場所へデータを移して使う」は、新しい <code>CadartDrawings##</code> へコピーして参照先を切り替えます。</li>
+    <li>「ツール → 場所を変える」は、すでに存在するデータフォルダを選んで参照先だけ切り替えます（コピーしません）。</li>
+    <li>「ツール → 新規CadartDrawingsを作成」は、空のデータフォルダを作って切り替えます。</li>
+    </ul>
+
+<p>詳細な仕様（テーブル・コード割付など）は、リポジトリの <code>資料/仕様書.md</code>（開発・運用向け）を参照してください。</p>
+<footer>CadartDrawings ／ minamite</footer>
+</body></html>
