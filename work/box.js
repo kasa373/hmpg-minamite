@@ -1,5 +1,5 @@
 (function () {
-  const codes = [51, 55, 51];
+  const codes = [51, 51, 55, 55, 51, 51];
   const storageKey = "minamite-work-ok";
   const skipNames = { ".gitkeep": true };
   const gate = document.getElementById("gate");
