@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>うちつくる　説明書　ver1.0.0</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --mute: #5d6d7e;
+      --header: #2c3e50;
+      --line: #c5ccd6;
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --accent: #2e6b9e;
+      --call: #fff8e8;
+      --call-line: #e0c070;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Yu Gothic UI", "Meiryo UI", Meiryo, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.7;
+    }
+    header {
+      background: var(--header);
+      color: #fff;
+      padding: 22px 28px;
+    }
+    header .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header img { width: 40px; height: 40px; }
+    header h1 { margin: 0; font-size: 1.45rem; font-weight: 700; }
+    header p { margin: 6px 0 0; opacity: .85; font-size: .95rem; }
+    nav {
+      background: #e4e8ed;
+      padding: 10px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: .92rem;
+    }
+    nav a { color: var(--accent); text-decoration: none; }
+    nav a:hover { text-decoration: underline; }
+    main { max-width: 880px; margin: 0 auto; padding: 28px 20px 64px; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px 26px 26px;
+      margin: 0 0 18px;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.2rem;
+      border-bottom: 2px solid var(--header);
+      padding-bottom: 6px;
+    }
+    h3 { margin: 18px 0 8px; font-size: 1.02rem; }
+    p { margin: 0 0 10px; }
+    ul, ol { margin: 0 0 10px; padding-left: 1.3em; }
+    li { margin: 4px 0; }
+    figure { margin: 14px 0 6px; }
+    figure img {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+    }
+    figcaption {
+      margin-top: 6px;
+      color: var(--mute);
+      font-size: .88rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .95rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eaedf1; font-weight: 600; }
+    kbd {
+      font-family: inherit;
+      background: #eaedf1;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0 6px;
+      font-size: .9em;
+    }
+    .callout {
+      background: var(--call);
+      border: 1px solid var(--call-line);
+      border-radius: 8px;
+      padding: 16px 20px 18px;
+      margin: 8px 0 4px;
+    }
+    .callout h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+    .howto {
+      font-weight: 700;
+      line-height: 2.15;
+      font-size: 1.08rem;
+      margin: 0;
+    }
+    .howto + .howto { margin-top: 4px; }
+    .note { color: var(--mute); font-size: .92rem; }
+    footer {
+      text-align: center;
+      color: var(--mute);
+      font-size: .85rem;
+      padding: 8px 0 24px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="images/app-icon.png" alt="うちつくる">
+      <div>
+        <h1>うちつくる　説明書　ver1.0.0</h1>
+        <p>色付きの部屋ブロックを並べて、間取りをつくります。</p>
+      </div>
+    </div>
+  </header>
+  <nav>
+    <a href="#screen">画面</a>
+    <a href="#basic">基本操作</a>
+    <a href="#parts">パーツ</a>
+    <a href="#edit">編集</a>
+    <a href="#floors">階数</a>
+    <a href="#view">表示</a>
+    <a href="#file">ファイル</a>
+    <a href="#print">印刷</a>
+    <a href="#home">HOME設定</a>
+    <a href="#keys">ショートカット</a>
+  </nav>
+  <main>
+    <section id="screen">
+      <h2>画面の見かた</h2>
+      <figure>
+        <img src="images/screen-main.png" alt="うちつくるのメイン画面。グリッド上の間取りと右側のパーツ一覧">
+        <figcaption>メイン画面。左が間取り、右がパーツ、下が寸法の表示です。</figcaption>
+      </figure>
+      <ul>
+        <li><strong>メニュー</strong> … ファイル／編集／ツール／説明書</li>
+        <li><strong>ツールバー</strong> … 新規・開く・保存・印刷、拡大・縮小・ズーム100%</li>
+        <li><strong>グリッド</strong> … 部屋を置くキャンバス。上のタブが階（1F、2F、3F）</li>
+        <li><strong>パーツ</strong> … 右側から選んでグリッドに置きます</li>
+        <li><strong>ステータスバー</strong> … 左は操作の案内、右はこの階と全階の縦・横・㎡・坪、ズーム</li>
+      </ul>
+    </section>
+
+    <section id="basic">
+      <h2>いちばん使う操作</h2>
+      <div class="callout">
+        <h3>必ず覚える2つ</h3>
+        <p class="howto">ダブルクリックで文字入力（16文字まで）。部屋の名前やメモを書けます。</p>
+        <p class="howto">同じ種類で隣り合う2つを選んで、右クリック → 結合。LDKなどの大きな形にできます。</p>
+      </div>
+      <p class="note">右側パーツ欄の下にも、同じ案内が出ています。</p>
+    </section>
+
+    <section id="parts">
+      <h2>パーツを置く</h2>
+      <ol>
+        <li>右の一覧から部屋を選びます。</li>
+        <li>グリッドの上に半透明のプレビューが出ます。クリックで置きます。</li>
+        <li><kbd>Esc</kbd> で選択を解除します。</li>
+      </ol>
+      <p>部屋どうしは重なりません。置けない位置ではプレビューが置けない表示になります。</p>
+      <p><strong>階段</strong>と<strong>飾り図形（四角・丸）</strong>は、他のパーツの上にも置けます。</p>
+      <h3>最初の大きさ</h3>
+      <table>
+        <tr><th>パーツ</th><th>記号</th><th>初期サイズ</th></tr>
+        <tr><td>玄関</td><td>ENTR</td><td>3畳</td></tr>
+        <tr><td>キッチン</td><td>KITC</td><td>4畳</td></tr>
+        <tr><td>トイレ</td><td>TOIL</td><td>1畳</td></tr>
+        <tr><td>バス</td><td>BATH</td><td>2畳</td></tr>
+        <tr><td>部屋</td><td>ROOM</td><td>6畳</td></tr>
+        <tr><td>洗面所</td><td>WASH</td><td>2畳</td></tr>
+        <tr><td>階段</td><td>STAI</td><td>2畳</td></tr>
+        <tr><td>廊下</td><td>HALL</td><td>2畳</td></tr>
+        <tr><td>WIC</td><td>WALK</td><td>2畳</td></tr>
+        <tr><td>物入れ</td><td>STOR</td><td>1畳</td></tr>
+        <tr><td>ポーチ</td><td>PORC</td><td>1畳</td></tr>
+        <tr><td>バルコニー</td><td>BALC</td><td>2畳</td></tr>
+        <tr><td>ウッドデッキ</td><td>DECK</td><td>4畳</td></tr>
+        <tr><td>四角・丸</td><td>SQUA / CIRC</td><td>飾り（面積に含めない）</td></tr>
+      </table>
+      <p class="note">1畳はマス2×4です。置いたあとに大きさを変えられます。</p>
+    </section>
+
+    <section id="edit">
+      <h2>編集</h2>
+
+      <h3>動かす</h3>
+      <p>置いたパーツをドラッグして移動します。他の部屋と重なる位置には動きません。</p>
+
+      <h3>大きさを変える</h3>
+      <ul>
+        <li>1つ選ぶと四隅に□が出ます。ドラッグして拡大・縮小します。</li>
+        <li>右クリック → <strong>寸法入力</strong> で、縦・横をメートルで指定できます。左上が固定で、いちばん近いマスに合わせます。</li>
+        <li>結合して凹凸になった形は、四隅ドラッグでは変えられません。寸法入力すると長方形に戻ります。</li>
+      </ul>
+
+      <h3>文字を入れる</h3>
+      <p class="howto">パーツをダブルクリックすると、文字を入力できます（16文字まで）。</p>
+      <p>空欄のままだと、記号と畳数が表示されます。階段と飾り図形は、文字を入れない限りラベルを出しません。</p>
+
+      <h3>結合</h3>
+      <p class="howto">同じ種類で辺が接している2つをクリックして選び、右クリック → 結合。</p>
+      <ol>
+        <li>1つ目をクリック。</li>
+        <li>同じ種類の隣をクリック（2つともオレンジの選択になります）。</li>
+        <li>右クリックして「結合」。</li>
+      </ol>
+      <p>種類が違う、離れている、飾り図形、のときは結合できません。L字など凹凸の形になります。</p>
+
+      <h3>コピー・カット・ペースト</h3>
+      <ul>
+        <li>右クリック、または <kbd>Ctrl+C</kbd> コピー / <kbd>Ctrl+X</kbd> カット / <kbd>Ctrl+V</kbd> ペースト</li>
+        <li>ペースト後はプレビューが出ます。クリックで貼り付け。<kbd>Esc</kbd> でやめます。</li>
+        <li>他の階のタブに切り替えて貼ることもできます。</li>
+      </ul>
+
+      <h3>削除</h3>
+      <p>選んで <kbd>Delete</kbd> または <kbd>Backspace</kbd>。</p>
+
+      <h3>もとに戻す・やり直し</h3>
+      <p><kbd>Ctrl+Z</kbd> でもとに戻す、<kbd>Ctrl+Y</kbd> または <kbd>Ctrl+Shift+Z</kbd> でやり直し。最大20回です。新しい操作をすると、やり直しの履歴は消えます。</p>
+    </section>
+
+    <section id="floors">
+      <h2>階数</h2>
+      <ul>
+        <li><strong>編集 → 階数追加</strong> … 2F、3Fを足します（最大3階）。</li>
+        <li><strong>編集 → 階数削除</strong> … いちばん上の階を消します。確認が出ます。</li>
+        <li>タブで階を切り替えます。</li>
+        <li>下の階の階段は、上の階にハッチで透けて表示されます（位置合わせ用）。</li>
+        <li><strong>編集 → 中心に配置</strong> … 全階の家をグリッドの中央へ動かします。</li>
+      </ul>
+    </section>
+
+    <section id="view">
+      <h2>表示</h2>
+      <ul>
+        <li>ツールバーの＋ / −、またはマウスホイールで拡大・縮小（20%〜400%）。</li>
+        <li><strong>100</strong> でズーム100%にし、家を画面の中央へ寄せます。</li>
+        <li>マウス中ボタンをドラッグすると、グリッドを手で動かせます。</li>
+        <li>右のパーツ欄の幅は、境目をドラッグして変えられます。</li>
+      </ul>
+    </section>
+
+    <section id="file">
+      <h2>ファイル</h2>
+      <table>
+        <tr><th>操作</th><th>場所</th><th>キー</th></tr>
+        <tr><td>新規作成</td><td>ファイル／ツールバー</td><td><kbd>Ctrl+N</kbd></td></tr>
+        <tr><td>開く</td><td>ファイル／ツールバー</td><td><kbd>Ctrl+O</kbd></td></tr>
+        <tr><td>上書き保存</td><td>ファイル／ツールバー</td><td><kbd>Ctrl+S</kbd></td></tr>
+        <tr><td>別名保存</td><td>ファイル</td><td><kbd>Ctrl+Shift+S</kbd></td></tr>
+        <tr><td>終了</td><td>ファイル</td><td>（ウィンドウを閉じる）</td></tr>
+      </table>
+      <p>保存形式は <strong>.uchi</strong> です。未保存の変更があるときは、新規・開く・サンプル・終了の前に確認します。</p>
+      <h3>サンプル</h3>
+      <p><strong>ツール → サンプル</strong> から、2LDK 平屋、3LDK 2階を開けます。大きさや名前を直して使えます。</p>
+    </section>
+
+    <section id="print">
+      <h2>印刷</h2>
+      <p>ファイル／ツールバーの印刷、または <kbd>Ctrl+P</kbd>。A4横です。</p>
+      <ul>
+        <li>家の範囲だけを印刷します。グリッドは出しません。</li>
+        <li>1階は1ページ全面、2階は左右、3階は3分割。どの階も同じ縮尺です。</li>
+        <li>手書き余白のため、家の図は少し小さく（約8割）載せます。</li>
+        <li>各階に「nF」と、その階の参考寸法（縦・横・㎡・坪）を出します。</li>
+        <li>下の階の階段は、上の階のいちばん奥にハッチで印刷します。</li>
+        <li>1階の家の角（左上と右下）に白抜き○を、全階同じ位置に付けます。部屋の下にあり、角からはみ出した分が見えます。</li>
+      </ul>
+    </section>
+
+    <section id="home">
+      <h2>HOME設定</h2>
+      <p><strong>Pro版のみ</strong>、<strong>ツール → HOME設定</strong> で畳サイズと壁厚を変えられます。設定は間取りファイル（.uchi）に保存されます。</p>
+      <p><strong>Free版</strong>では HOME設定は使えません。新規作成は初期値のままです。ファイルを開いたときは、そのファイルに入っている設定をそのまま使います。</p>
+      <figure>
+        <img src="images/screen-home.png" alt="HOME設定。1畳サイズ、外壁、内壁を選ぶ画面">
+        <figcaption>HOME設定（Pro版）。畳サイズと壁の厚さを選びます。</figcaption>
+      </figure>
+      <ul>
+        <li><strong>1畳のサイズ</strong> … 江戸間・中京間・京間・団地間・メーターモジュール</li>
+        <li><strong>外壁の厚さ</strong> … 外形（縦・横）に使います</li>
+        <li><strong>内壁の厚さ</strong> … 部屋の内寸表示用。外形には含めません</li>
+      </ul>
+      <p>間取りは柱の芯基準です。外形はパーツの外接（柱芯）に、外壁厚の半分を両側へ加えた値です。四角・丸は計算に含めません。平米は縦×横です。</p>
+      <p>画面右下の「この階」「全階」の数字も、この設定で変わります。</p>
+    </section>
+
+    <section id="keys">
+      <h2>ショートカット一覧</h2>
+      <table>
+        <tr><th>キー</th><th>動作</th></tr>
+        <tr><td><kbd>Ctrl+N</kbd></td><td>新規作成</td></tr>
+        <tr><td><kbd>Ctrl+O</kbd></td><td>開く</td></tr>
+        <tr><td><kbd>Ctrl+S</kbd></td><td>上書き保存</td></tr>
+        <tr><td><kbd>Ctrl+Shift+S</kbd></td><td>別名保存</td></tr>
+        <tr><td><kbd>Ctrl+P</kbd></td><td>印刷</td></tr>
+        <tr><td><kbd>Ctrl+Z</kbd></td><td>もとに戻す</td></tr>
+        <tr><td><kbd>Ctrl+Y</kbd> / <kbd>Ctrl+Shift+Z</kbd></td><td>やり直し</td></tr>
+        <tr><td><kbd>Ctrl+C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>コピー / カット / ペースト</td></tr>
+        <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>削除</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>配置・貼り付け・パーツ選択を解除</td></tr>
+        <tr><td>ホイール</td><td>拡大・縮小</td></tr>
+        <tr><td>マウス中ボタン</td><td>グリッドをつかんで移動</td></tr>
+        <tr><td>ダブルクリック</td><td>文字入力（16文字）</td></tr>
+      </table>
+    </section>
+  </main>
+  <footer>うちつくる　minamite</footer>
+</body>
+</html>
