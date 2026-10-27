@@ -334,6 +334,7 @@ function skyShade(lat, lst, sun) {
   const shade = Math.round(30 - t * 60);
   const text = `${shade > 0 ? '+' : ''}${shade}%`;
   if ($('shadeLabel').textContent !== text) $('shadeLabel').textContent = text;
+  if (shadeEl.value !== String(shade)) shadeEl.value = String(shade);
   return shade;
 }
 
