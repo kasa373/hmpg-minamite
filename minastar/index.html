@@ -153,6 +153,7 @@
       </label>
       <label class="check"><input id="showLines" type="checkbox" checked> 星座線</label>
       <label class="check"><input id="showNames" type="checkbox" checked> 星座名</label>
+      <label class="check"><input id="showAltitude" type="checkbox" checked> 高度線</label>
       <label class="check"><input id="showInfo" type="checkbox" checked> 現在地情報</label>
       <label class="check"><input id="showMeteors" type="checkbox"> 流星</label>
       <p class="note">星をクリックすると、下に説明が出ます。9等星・10等星・11等星は、最大ズームで止めたときだけ出ます。</p>
@@ -174,9 +175,13 @@
       <p id="trackName" class="note">曲がまだありません</p>
     </fieldset>
 
-    <label id="shadeRow">背景の濃さ <span id="shadeLabel">0%</span>
+    <div id="shadeRow">
+      <div id="shadeHead">
+        <span>背景の濃さ <span id="shadeLabel">0%</span></span>
+        <label class="check"><input id="shadeAuto" type="checkbox"> 自動</label>
+      </div>
       <input id="shade" type="range" min="-30" max="30" step="1" value="0">
-    </label>
+    </div>
     <label id="starSizeRow">星の大きさ <span id="starSizeLabel">1倍</span>
       <input id="starSize" type="range" min="1" max="5" step="0.1" value="1">
     </label>

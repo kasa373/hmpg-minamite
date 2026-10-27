@@ -44,9 +44,11 @@ const playModeEl = $('playMode');
 const magEl = $('mag');
 const northEl = $('north');
 const shadeEl = $('shade');
+const shadeAutoEl = $('shadeAuto');
 const starSizeEl = $('starSize');
 const linesEl = $('showLines');
 const namesEl = $('showNames');
+const altitudeEl = $('showAltitude');
 const infoEl = $('showInfo');
 const meteorsEl = $('showMeteors');
 const hudText = $('hudText');
@@ -113,9 +115,12 @@ playModeEl.value = saved.playMode === 'here' ? 'here' : 'world';
 tiltEl.value = saved.tilt == null || saved.tilt === '' ? '-45' : saved.tilt;
 northEl.value = saved.north || '0';
 shadeEl.value = saved.shade ?? '0';
+shadeAutoEl.checked = saved.shadeAuto === true;
+let manualShade = shadeEl.value;
 starSizeEl.value = saved.starSize == null || saved.starSize === '' ? '1' : saved.starSize;
 linesEl.checked = saved.lines !== false;
 namesEl.checked = saved.names !== false;
+altitudeEl.checked = saved.altitude !== false;
 infoEl.checked = saved.info !== false;
 meteorsEl.checked = saved.meteors === true;
 $('dir').value = saved.dir || 'east';
@@ -147,8 +152,9 @@ function saveSettings() {
     lat: latEl.value, lon: lonEl.value, pref: prefEl.value, placeName,
     mag: magEl.value, minutes: minutesEl.value, dayMinutes: dayMinutesEl.value,
     playMode: playModeEl.value, tilt: tiltEl.value,
-    north: northEl.value, shade: shadeEl.value, starSize: starSizeEl.value,
-    lines: linesEl.checked, names: namesEl.checked, info: infoEl.checked,
+    north: northEl.value, shade: shadeAutoEl.checked ? manualShade : shadeEl.value,
+    shadeAuto: shadeAutoEl.checked, starSize: starSizeEl.value,
+    lines: linesEl.checked, names: namesEl.checked, altitude: altitudeEl.checked, info: infoEl.checked,
     meteors: meteorsEl.checked,
     dir: $('dir').value, volume: $('volume').value,
     when: whenEl.value, city: cityEl.value, placeKind: placeKindEl.value,
@@ -314,6 +320,23 @@ function panBy(dx, dy) {
   }
 }
 
+function skyShade(lat, lst, sun) {
+  if (!shadeAutoEl.checked) return Number(shadeEl.value);
+  const vec = apply3(horizontalMatrix(lat, lst), raDecToVec(sun[0], sun[1]));
+  const alt = Math.asin(Math.max(-1, Math.min(1, vec[2]))) * 180 / Math.PI;
+  const p = lat * Math.PI / 180;
+  const d = sun[1] * Math.PI / 180;
+  const toDeg = (x) => Math.asin(Math.max(-1, Math.min(1, x))) * 180 / Math.PI;
+  const maxAlt = toDeg(Math.sin(p) * Math.sin(d) + Math.cos(p) * Math.cos(d));
+  const minAlt = toDeg(Math.sin(p) * Math.sin(d) - Math.cos(p) * Math.cos(d));
+  const span = maxAlt - minAlt;
+  const t = span < 0.5 ? 0.5 : Math.max(0, Math.min(1, (alt - minAlt) / span));
+  const shade = Math.round(30 - t * 60);
+  const text = `${shade > 0 ? '+' : ''}${shade}%`;
+  if ($('shadeLabel').textContent !== text) $('shadeLabel').textContent = text;
+  return shade;
+}
+
 function updateLabels() {
   const tilt = Number(tiltEl.value);
   $('tiltLabel').textContent = Math.abs(tilt) < 1
@@ -321,8 +344,11 @@ function updateLabels() {
     : (tilt > 0 ? `南へ ${tilt}°` : `北へ ${-tilt}°`);
   $('magLabel').textContent = `${magEl.value}等星`;
   $('northLabel').textContent = `${northEl.value}°`;
-  const shade = Number(shadeEl.value);
-  $('shadeLabel').textContent = `${shade > 0 ? '+' : ''}${shade}%`;
+  if (!shadeAutoEl.checked) {
+    const shade = Number(shadeEl.value);
+    $('shadeLabel').textContent = `${shade > 0 ? '+' : ''}${shade}%`;
+  }
+  shadeEl.disabled = shadeAutoEl.checked;
   const starSize = Math.round(Number(starSizeEl.value) * 10) / 10;
   $('starSizeLabel').textContent = `${Number.isInteger(starSize) ? starSize : starSize.toFixed(1)}倍`;
   hudText.hidden = !infoEl.checked;
@@ -539,10 +565,21 @@ dayMinutesEl.addEventListener('change', saveSettings);
 playModeEl.addEventListener('change', () => { updateLabels(); resetRoute(); saveSettings(); });
 magEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 northEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
-shadeEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
+shadeEl.addEventListener('input', () => {
+  if (!shadeAutoEl.checked) manualShade = shadeEl.value;
+  updateLabels();
+  saveSettings();
+});
+shadeAutoEl.addEventListener('change', () => {
+  if (shadeAutoEl.checked) manualShade = shadeEl.value;
+  else shadeEl.value = manualShade;
+  updateLabels();
+  saveSettings();
+});
 starSizeEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 linesEl.addEventListener('change', saveSettings);
 namesEl.addEventListener('change', saveSettings);
+altitudeEl.addEventListener('change', saveSettings);
 infoEl.addEventListener('change', () => { updateLabels(); saveSettings(); });
 meteorsEl.addEventListener('change', () => {
   if (!meteorsEl.checked) meteors.length = 0;
@@ -1056,6 +1093,7 @@ function frame(now) {
   const jd = julianDate(utc);
   const lst = gmstDeg(jd) + here.lon;
   const sun = sunRaDec(jd);
+  const shade = skyShade(here.lat, lst, sun);
   const moon = moonRaDec(jd);
   const planets = {
     venus: planetRaDec('venus', jd),
@@ -1073,10 +1111,12 @@ function frame(now) {
     centerAlt,
     centerAz,
     northRot: Number(northEl.value),
-    shade: Number(shadeEl.value),
+    shade,
     starScale: Number(starSizeEl.value),
     showLines: linesEl.checked,
     showNames: namesEl.checked,
+    showAltitude: altitudeEl.checked,
+    playing,
     stars,
     faint,
     faintIndex,

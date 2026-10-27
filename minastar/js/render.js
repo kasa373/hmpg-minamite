@@ -4,9 +4,10 @@ import {
 
 const MIN_RADIUS = 8;
 
-// shade は −30..30。0 が今の色、+30 で黒。マイナス側は同じ幅だけ夜空を明るくする。
+// スライダー −30..+30 は、以前の −20..+30 の濃さ。−30 は旧−20、+30 は黒のまま。
 function shadeHex(hex, shade) {
-  const k = Math.max(-30, Math.min(30, Number(shade) || 0)) / 30;
+  const s = Math.max(-30, Math.min(30, Number(shade) || 0));
+  const k = (-20 + (s + 30) * (50 / 60)) / 30;
   const n = Number.parseInt(hex.slice(1), 16);
   const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   const out = rgb.map((c) => {
@@ -570,6 +571,98 @@ export function createRenderer(canvas) {
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
+    if (state.showAltitude !== false) {
+      ctx.save();
+      ctx.lineWidth = Math.max(1, dpr * 0.9);
+      ctx.strokeStyle = 'rgba(176, 198, 224, 0.42)';
+      ctx.fillStyle = 'rgba(214, 226, 242, 0.92)';
+      ctx.font = `${Math.round(12 * dpr)}px "Yu Gothic UI", "Hiragino Sans", sans-serif`;
+      ctx.textBaseline = 'middle';
+      const placeLabel = (text, pt) => {
+        if (!pt || pt.y > h - 14 * dpr) return;
+        const gap = 6 * dpr;
+        const width = ctx.measureText(text).width;
+        const y = pt.y < 16 * dpr ? pt.y + 4 * dpr : pt.y;
+        ctx.textBaseline = pt.y < 16 * dpr ? 'top' : 'middle';
+        if (pt.x + gap + width <= w - 4 * dpr) {
+          ctx.textAlign = 'left';
+          ctx.fillText(text, pt.x + gap, y);
+        } else {
+          ctx.textAlign = 'right';
+          ctx.fillText(text, Math.max(width + 4 * dpr, pt.x - gap), y);
+        }
+      };
+      const placeTopLabel = (text, pt) => {
+        if (!pt || pt.x < w / 2 || pt.x > w - 28 * dpr) return;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(text, pt.x, pt.y + 4 * dpr);
+      };
+      for (let alt = 15; alt <= 75; alt += 15) {
+        const pts = [];
+        const flush = () => {
+          if (pts.length >= 2) {
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+            ctx.stroke();
+          }
+          pts.length = 0;
+        };
+        for (let az = 0; az <= 360; az += 3) {
+          const p = projectBody(horizontalToEq(az % 360, alt), true);
+          if (!p) {
+            flush();
+            continue;
+          }
+          pts.push(p);
+        }
+        flush();
+      }
+      const edgeX = w - 2;
+      let prevAlt = null;
+      let prevY = 0;
+      const stepY = Math.max(1, Math.round(dpr));
+      for (let y = 0; y <= h; y += stepY) {
+        const altDeg = screenAlt(edgeX, y) * 180 / Math.PI;
+        if (prevAlt != null && Number.isFinite(prevAlt) && Number.isFinite(altDeg)) {
+          const lo = Math.min(prevAlt, altDeg);
+          const hi = Math.max(prevAlt, altDeg);
+          if (hi - lo < 30) {
+            for (let mark = 0; mark <= 90; mark += 15) {
+              if (lo < mark && hi >= mark) {
+                const t = (mark - prevAlt) / (altDeg - prevAlt);
+                placeLabel(`${mark}°`, { x: edgeX, y: prevY + (y - prevY) * t });
+              }
+            }
+          }
+        }
+        prevAlt = altDeg;
+        prevY = y;
+      }
+      const edgeY = 2;
+      let prevTopAlt = null;
+      let prevX = w / 2;
+      const stepX = Math.max(1, Math.round(dpr));
+      for (let x = w / 2; x <= w; x += stepX) {
+        const altDeg = screenAlt(x, edgeY) * 180 / Math.PI;
+        if (prevTopAlt != null && Number.isFinite(prevTopAlt) && Number.isFinite(altDeg)) {
+          const lo = Math.min(prevTopAlt, altDeg);
+          const hi = Math.max(prevTopAlt, altDeg);
+          if (hi - lo < 30) {
+            for (let mark = 0; mark <= 90; mark += 15) {
+              if (lo < mark && hi >= mark) {
+                const t = (mark - prevTopAlt) / (altDeg - prevTopAlt);
+                placeTopLabel(`${mark}°`, { x: prevX + (x - prevX) * t, y: edgeY });
+              }
+            }
+          }
+        }
+        prevTopAlt = altDeg;
+        prevX = x;
+      }
+      ctx.restore();
+    }
     const compass = [
       ['北', 0], ['北東', 45], ['東', 90], ['南東', 135],
       ['南', 180], ['南西', 225], ['西', 270], ['北西', 315],
@@ -585,7 +678,7 @@ export function createRenderer(canvas) {
       ctx.moveTo(base.x, base.y);
       ctx.lineTo(raised.x, raised.y);
       ctx.stroke();
-      ctx.fillStyle = 'rgba(236, 224, 196, 0.9)';
+      ctx.fillStyle = state.playing ? 'rgba(154, 163, 179, 0.9)' : 'rgba(236, 224, 196, 0.9)';
       ctx.font = `${Math.round(14 * dpr)}px "Yu Gothic UI", "Hiragino Sans", sans-serif`;
       ctx.fillText(label, raised.x, raised.y - 2 * dpr);
     }
