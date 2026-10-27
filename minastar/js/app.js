@@ -43,6 +43,9 @@ const dayMinutesEl = $('dayMinutes');
 const playModeEl = $('playMode');
 const magEl = $('mag');
 const northEl = $('north');
+const shadeEl = $('shade');
+const linesEl = $('showLines');
+const namesEl = $('showNames');
 const hudText = $('hudText');
 const faintButtons = [9, 10, 11].map((mag) => ({ mag, el: $(`btn${mag}`) }));
 
@@ -105,6 +108,9 @@ dayMinutesEl.value = saved.dayMinutes || '30';
 playModeEl.value = saved.playMode === 'here' ? 'here' : 'world';
 tiltEl.value = saved.tilt || '0';
 northEl.value = saved.north || '0';
+shadeEl.value = saved.shade ?? '0';
+linesEl.checked = saved.lines !== false;
+namesEl.checked = saved.names !== false;
 $('dir').value = saved.dir || 'east';
 $('volume').value = saved.volume ?? 0.7;
 cityEl.value = saved.city || '';
@@ -134,7 +140,9 @@ function saveSettings() {
     lat: latEl.value, lon: lonEl.value, pref: prefEl.value, placeName,
     mag: magEl.value, minutes: minutesEl.value, dayMinutes: dayMinutesEl.value,
     playMode: playModeEl.value, tilt: tiltEl.value,
-    north: northEl.value, dir: $('dir').value, volume: $('volume').value,
+    north: northEl.value, shade: shadeEl.value,
+    lines: linesEl.checked, names: namesEl.checked,
+    dir: $('dir').value, volume: $('volume').value,
     when: whenEl.value, city: cityEl.value, placeKind: placeKindEl.value,
   }));
 }
@@ -283,6 +291,8 @@ function updateLabels() {
     : (tilt > 0 ? `南へ ${tilt}°` : `北へ ${-tilt}°`);
   $('magLabel').textContent = `${magEl.value}等星`;
   $('northLabel').textContent = `${northEl.value}°`;
+  const shade = Number(shadeEl.value);
+  $('shadeLabel').textContent = `${shade > 0 ? '+' : ''}${shade}%`;
   $('placeName').textContent = placeName;
   const kind = placeKindEl.value;
   $('cityPlace').hidden = kind !== 'city';
@@ -493,6 +503,9 @@ dayMinutesEl.addEventListener('change', saveSettings);
 playModeEl.addEventListener('change', () => { updateLabels(); resetRoute(); saveSettings(); });
 magEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 northEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
+shadeEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
+linesEl.addEventListener('change', saveSettings);
+namesEl.addEventListener('change', saveSettings);
 
 function togglePlay() {
   playing = !playing;
@@ -796,6 +809,9 @@ function frame(now) {
     centerAlt,
     centerAz,
     northRot: Number(northEl.value),
+    shade: Number(shadeEl.value),
+    showLines: linesEl.checked,
+    showNames: namesEl.checked,
     stars,
     faint,
     faintIndex,

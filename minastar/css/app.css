@@ -139,6 +139,8 @@ label.check {
 
 input[type="range"] { width: 100%; accent-color: var(--gold); }
 
+#shadeRow { margin: 4px 2px 10px; }
+
 input[type="search"], input[type="number"], input[type="datetime-local"], select {
   padding: 7px 8px;
   width: 100%;

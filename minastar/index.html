@@ -128,6 +128,8 @@
       <label>北の向き <span id="northLabel">0°</span>
         <input id="north" type="range" min="0" max="360" step="1" value="0">
       </label>
+      <label class="check"><input id="showLines" type="checkbox" checked> 星座線</label>
+      <label class="check"><input id="showNames" type="checkbox" checked> 星座名</label>
       <p class="note">星をクリックすると、下に説明が出ます。9等星・10等星・11等星は、最大ズームで止めたときだけ出ます。</p>
     </fieldset>
 
@@ -147,6 +149,9 @@
       <p id="trackName" class="note">曲がまだありません</p>
     </fieldset>
 
+    <label id="shadeRow">背景の濃さ <span id="shadeLabel">0%</span>
+      <input id="shade" type="range" min="-30" max="30" step="1" value="0">
+    </label>
     <div class="row">
       <button id="full" type="button">全画面</button>
       <button id="hide" type="button">操作を隠す</button>
