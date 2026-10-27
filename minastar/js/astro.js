@@ -260,14 +260,15 @@ export function greatCircle(lat1, lon1, bearingDeg, deltaDeg) {
   return { lat: φ2 * RAD, lon: wrapLon(λ2 * RAD) };
 }
 
-/** tilt 0 keeps latitude. Positive tilt leans south. west flips the way around. */
+/** tilt 0 keeps latitude. Positive tilt leans south.
+ *  West follows that same circle in the opposite direction. */
 export function routePoint(lat, lon, tiltDeg, west, fraction) {
   const sign = west ? -1 : 1;
   const f = fraction - Math.floor(fraction);
   if (Math.abs(tiltDeg) < 0.8) {
     return { lat, lon: wrapLon(lon + sign * f * 360) };
   }
-  const bearing = west ? 270 - tiltDeg : 90 + tiltDeg;
+  const bearing = 90 + tiltDeg + (west ? 180 : 0);
   return greatCircle(lat, lon, bearing, f * 360);
 }
 

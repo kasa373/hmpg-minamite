@@ -20,6 +20,14 @@ html, body {
 
 body.panel-hidden #panel { display: none; }
 
+#showButtons { display: none; }
+
+body.buttons-hidden #panel,
+body.buttons-hidden #starCard,
+body.buttons-hidden #float .hudRow { display: none; }
+
+body.buttons-hidden #showButtons { display: inline-block; }
+
 #sky {
   position: fixed;
   inset: 0;
@@ -56,10 +64,23 @@ body.panel-hidden #panel { display: none; }
 
 #float {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-left: auto;
+  pointer-events: auto;
+}
+
+.hudRow {
+  display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
-  pointer-events: auto;
+}
+
+button:disabled {
+  opacity: 0.38;
+  cursor: default;
 }
 
 button, select, input[type="number"], input[type="datetime-local"], input[type="search"] {
@@ -139,7 +160,7 @@ label.check {
 
 input[type="range"] { width: 100%; accent-color: var(--gold); }
 
-#shadeRow { margin: 4px 2px 10px; }
+#shadeRow, #starSizeRow { margin: 4px 2px 10px; }
 
 input[type="search"], input[type="number"], input[type="datetime-local"], select {
   padding: 7px 8px;

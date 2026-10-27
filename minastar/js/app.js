@@ -44,8 +44,10 @@ const playModeEl = $('playMode');
 const magEl = $('mag');
 const northEl = $('north');
 const shadeEl = $('shade');
+const starSizeEl = $('starSize');
 const linesEl = $('showLines');
 const namesEl = $('showNames');
+const infoEl = $('showInfo');
 const hudText = $('hudText');
 const faintButtons = [9, 10, 11].map((mag) => ({ mag, el: $(`btn${mag}`) }));
 
@@ -84,6 +86,7 @@ let playing = false;
 let fraction = 0;
 let lastTick = 0;
 let viewRadius = 32;
+let zoomPower = 1;
 let centerAlt = 22;
 let centerAz = 180;
 let faintLimit = 0;
@@ -106,11 +109,13 @@ magEl.value = saved.mag || '6';
 minutesEl.value = saved.minutes || '30';
 dayMinutesEl.value = saved.dayMinutes || '30';
 playModeEl.value = saved.playMode === 'here' ? 'here' : 'world';
-tiltEl.value = saved.tilt || '0';
+tiltEl.value = saved.tilt == null || saved.tilt === '' ? '-45' : saved.tilt;
 northEl.value = saved.north || '0';
 shadeEl.value = saved.shade ?? '0';
+starSizeEl.value = saved.starSize == null || saved.starSize === '' ? '1' : saved.starSize;
 linesEl.checked = saved.lines !== false;
 namesEl.checked = saved.names !== false;
+infoEl.checked = saved.info !== false;
 $('dir').value = saved.dir || 'east';
 $('volume').value = saved.volume ?? 0.7;
 cityEl.value = saved.city || '';
@@ -140,8 +145,8 @@ function saveSettings() {
     lat: latEl.value, lon: lonEl.value, pref: prefEl.value, placeName,
     mag: magEl.value, minutes: minutesEl.value, dayMinutes: dayMinutesEl.value,
     playMode: playModeEl.value, tilt: tiltEl.value,
-    north: northEl.value, shade: shadeEl.value,
-    lines: linesEl.checked, names: namesEl.checked,
+    north: northEl.value, shade: shadeEl.value, starSize: starSizeEl.value,
+    lines: linesEl.checked, names: namesEl.checked, info: infoEl.checked,
     dir: $('dir').value, volume: $('volume').value,
     when: whenEl.value, city: cityEl.value, placeKind: placeKindEl.value,
   }));
@@ -205,18 +210,37 @@ function atMaxZoom() {
   return viewRadius <= MIN_R + 0.05;
 }
 
+const powerButtons = [1, 2, 4, 8].map((power) => ({ power, el: $(`pow${power}`) }));
+
 function updateFaintButton() {
   const show = atMaxZoom() && !playing;
+  $('faintRow').hidden = !show;
   for (const b of faintButtons) {
     b.el.hidden = !show;
     b.el.classList.toggle('on', faintLimit === b.mag);
   }
+  const showPower = atMaxZoom();
+  $('powerRow').hidden = !showPower;
+  for (const b of powerButtons) {
+    b.el.hidden = !showPower;
+    b.el.classList.toggle('on', zoomPower === b.power);
+  }
+  const locked = zoomPower > 1;
+  $('zoomIn').disabled = locked;
+  $('zoomOut').disabled = locked;
 }
 
 function setRadius(next) {
   const wasMax = atMaxZoom();
+  zoomPower = 1;
   viewRadius = Math.max(MIN_R, Math.min(46, next));
   if (wasMax && !atMaxZoom()) disableFaint();
+  updateFaintButton();
+}
+
+function setPower(power) {
+  zoomPower = power;
+  viewRadius = MIN_R / power;
   updateFaintButton();
 }
 
@@ -293,6 +317,9 @@ function updateLabels() {
   $('northLabel').textContent = `${northEl.value}°`;
   const shade = Number(shadeEl.value);
   $('shadeLabel').textContent = `${shade > 0 ? '+' : ''}${shade}%`;
+  const starSize = Math.round(Number(starSizeEl.value) * 10) / 10;
+  $('starSizeLabel').textContent = `${Number.isInteger(starSize) ? starSize : starSize.toFixed(1)}倍`;
+  hudText.hidden = !infoEl.checked;
   $('placeName').textContent = placeName;
   const kind = placeKindEl.value;
   $('cityPlace').hidden = kind !== 'city';
@@ -306,7 +333,10 @@ function updateLabels() {
 
 function hud(here, utc) {
   const moon = moonRaDec(julianDate(utc));
-  const lap = Math.round(((fraction % 1) + 1) % 1 * 100);
+  const wrapped = ((fraction % 1) + 1) % 1;
+  const lap = !hereMode() && fraction >= 1 && wrapped === 0
+    ? 100
+    : Math.round(wrapped * 100);
   const clock = hereMode()
     ? `${formatJst(utc)} 日本時間`
     : `固定 ${formatJst(utc)} 日本時間`;
@@ -496,7 +526,7 @@ whenEl.addEventListener('change', () => { resetRoute(); saveSettings(); });
 $('whenNow').addEventListener('click', () => setWhen(new Date()));
 $('whenPrev').addEventListener('click', () => setWhen(new Date(readWhen().getTime() - 86400000)));
 $('whenNext').addEventListener('click', () => setWhen(new Date(readWhen().getTime() + 86400000)));
-tiltEl.addEventListener('input', () => { updateLabels(); resetRoute(); });
+tiltEl.addEventListener('input', () => { updateLabels(); resetRoute(); saveSettings(); });
 $('dir').addEventListener('change', () => { resetRoute(); saveSettings(); });
 minutesEl.addEventListener('change', saveSettings);
 dayMinutesEl.addEventListener('change', saveSettings);
@@ -504,8 +534,10 @@ playModeEl.addEventListener('change', () => { updateLabels(); resetRoute(); save
 magEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 northEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 shadeEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
+starSizeEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 linesEl.addEventListener('change', saveSettings);
 namesEl.addEventListener('change', saveSettings);
+infoEl.addEventListener('change', () => { updateLabels(); saveSettings(); });
 
 function togglePlay() {
   playing = !playing;
@@ -528,6 +560,7 @@ function horizonAlt() {
 }
 
 function lookSky(alt, az) {
+  zoomPower = 1;
   viewRadius = 32;
   centerAlt = alt;
   centerAz = az;
@@ -551,9 +584,14 @@ $('full').addEventListener('click', () => {
 });
 $('hide').addEventListener('click', () => document.body.classList.add('panel-hidden'));
 $('panelToggle').addEventListener('click', () => document.body.classList.toggle('panel-hidden'));
+$('hideButtons').addEventListener('click', () => document.body.classList.add('buttons-hidden'));
+$('showButtons').addEventListener('click', () => document.body.classList.remove('buttons-hidden'));
 
 for (const b of faintButtons) {
   b.el.addEventListener('click', () => chooseFaint(b));
+}
+for (const b of powerButtons) {
+  b.el.addEventListener('click', () => setPower(b.power));
 }
 
 async function chooseFaint(button) {
@@ -652,7 +690,7 @@ canvas.addEventListener('pointermove', (e) => {
     const [a, b] = [...pointers.values()];
     const dist = Math.hypot(a.x - b.x, a.y - b.y);
     const prev = Number(canvas.dataset.pinch || dist);
-    if (canvas.dataset.pinch) setRadius(viewRadius * (prev / dist));
+    if (canvas.dataset.pinch && zoomPower === 1) setRadius(viewRadius * (prev / dist));
     canvas.dataset.pinch = String(dist);
     return;
   }
@@ -772,6 +810,7 @@ canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
+  if (zoomPower > 1) return;
   setRadius(viewRadius * (e.deltaY > 0 ? 1.12 : 0.88));
 }, { passive: false });
 
@@ -782,7 +821,16 @@ function frame(now) {
     const minutes = hereMode()
       ? Math.max(1, Math.min(1440, Number(dayMinutesEl.value) || 30))
       : Math.max(1, Number(minutesEl.value) || 30);
-    fraction += dt / (minutes * 60000);
+    const step = dt / (minutes * 60000);
+    if (!hereMode() && fraction + step >= Math.floor(fraction) + 1) {
+      fraction = Math.floor(fraction) + 1;
+      playing = false;
+      lastTick = 0;
+      syncPlayButtons();
+      updateFaintButton();
+    } else {
+      fraction += step;
+    }
   } else {
     lastTick = 0;
   }
@@ -810,6 +858,7 @@ function frame(now) {
     centerAz,
     northRot: Number(northEl.value),
     shade: Number(shadeEl.value),
+    starScale: Number(starSizeEl.value),
     showLines: linesEl.checked,
     showNames: namesEl.checked,
     stars,

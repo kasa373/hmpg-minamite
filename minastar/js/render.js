@@ -58,10 +58,11 @@ export function indexFaint(stars) {
   return { counts, starts, indices };
 }
 
-function starSize(mag, viewRadius) {
+function starSize(mag, viewRadius, scale) {
   const zoom = 90 / viewRadius;
-  const s = (7.2 - mag) * 0.55 * Math.pow(zoom, 0.35);
-  return Math.max(mag > 5.5 ? 0.8 : 1.1, Math.min(8, s));
+  const s = (7.2 - mag) * 0.55 * Math.pow(zoom, 0.35) * scale;
+  const floor = (mag > 5.5 ? 0.8 : 1.1) * scale;
+  return Math.max(floor, Math.min(8 * scale, s));
 }
 
 export function createRenderer(canvas) {
@@ -131,6 +132,7 @@ export function createRenderer(canvas) {
       stars, faint, faintIndex, showFaint, faintLimit, sky, onLand,
     } = state;
     const shade = state.shade;
+    const starScale = Math.max(1, Math.min(5, Number(state.starScale) || 1));
     const ground = shadeHex(onLand ? '#16120e' : '#071018', shade);
     const cx = w / 2;
     const cy = h / 2;
@@ -167,7 +169,7 @@ export function createRenderer(canvas) {
       view[2] * up[0] - view[0] * up[2],
       view[0] * up[1] - view[1] * up[0],
     ];
-    const ang = Math.max(0.08, viewRadius * DEG);
+    const ang = Math.max(0.15, viewRadius) * DEG;
     const focal = Math.max(w, h) / 2 / Math.tan(ang);
     const maxAng = Math.atan(Math.hypot(w, h) / 2 / focal) * 1.05;
 
@@ -370,11 +372,16 @@ export function createRenderer(canvas) {
       if (faintPixel || mag >= 3.2) {
         const a = faintPixel ? (0.4 + (11 - mag) * 0.1) * fade : (0.45 + fade * 0.55);
         const rgb = faintPixel ? [206, 214, 228] : bvColor(bv);
-        plotPoint(p.x, p.y, rgb, a);
-        if (!faintPixel && mag < 5.2) plotPoint(p.x + 1, p.y, rgb, a * 0.7);
+        if (starScale <= 1.001) {
+          plotPoint(p.x, p.y, rgb, a);
+          if (!faintPixel && mag < 5.2) plotPoint(p.x + 1, p.y, rgb, a * 0.7);
+          return;
+        }
+        const radius = (faintPixel ? 0.55 : (mag < 5.2 ? 1.15 : 0.7)) * starScale;
+        plot(p.x, p.y, radius, rgb, a);
         return;
       }
-      plot(p.x, p.y, starSize(mag, viewRadius), bvColor(bv), 0.55 + fade * 0.45);
+      plot(p.x, p.y, starSize(mag, viewRadius, starScale), bvColor(bv), 0.55 + fade * 0.45);
     };
 
     let faintBox = null;

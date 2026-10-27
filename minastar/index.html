@@ -15,9 +15,18 @@
   <div id="hud">
     <p id="hudText">星空を読み込んでいます</p>
     <div id="float">
-      <button id="btn9" type="button" hidden>9等星</button>
-      <button id="btn10" type="button" hidden>10等星</button>
-      <button id="btn11" type="button" hidden>11等星</button>
+      <div id="faintRow" class="hudRow" hidden>
+        <button id="btn9" type="button" hidden>9等星</button>
+        <button id="btn10" type="button" hidden>10等星</button>
+        <button id="btn11" type="button" hidden>11等星</button>
+      </div>
+      <div id="powerRow" class="hudRow" hidden>
+        <button id="pow1" type="button">1X</button>
+        <button id="pow2" type="button">2X</button>
+        <button id="pow4" type="button">4X</button>
+        <button id="pow8" type="button">8X</button>
+      </div>
+      <div class="hudRow">
       <button id="zoomOut" type="button" aria-label="ズームアウト">−</button>
       <button id="zoomIn" type="button" aria-label="ズームイン">＋</button>
       <button id="zenith" type="button">天頂</button>
@@ -27,6 +36,9 @@
       <button id="lookW" type="button">西</button>
       <button id="playHud" type="button">再生</button>
       <button id="panelToggle" type="button">操作</button>
+      <button id="hideButtons" type="button" aria-label="ボタンを隠す">>></button>
+      </div>
+      <button id="showButtons" type="button" aria-label="ボタンを戻す"><<</button>
     </div>
   </div>
   <form id="panel">
@@ -102,8 +114,8 @@
             <option value="west">西まわり</option>
           </select>
         </label>
-        <label>コース <span id="tiltLabel">真東（緯度を保つ）</span>
-          <input id="tilt" type="range" min="-60" max="60" step="1" value="0">
+        <label>コース <span id="tiltLabel">北へ 45°</span>
+          <input id="tilt" type="range" min="-90" max="90" step="1" value="-45">
         </label>
         <label>一周の時間（分）
           <input id="minutes" type="number" min="1" max="240" step="1" value="30">
@@ -130,6 +142,7 @@
       </label>
       <label class="check"><input id="showLines" type="checkbox" checked> 星座線</label>
       <label class="check"><input id="showNames" type="checkbox" checked> 星座名</label>
+      <label class="check"><input id="showInfo" type="checkbox" checked> 現在地情報</label>
       <p class="note">星をクリックすると、下に説明が出ます。9等星・10等星・11等星は、最大ズームで止めたときだけ出ます。</p>
     </fieldset>
 
@@ -151,6 +164,9 @@
 
     <label id="shadeRow">背景の濃さ <span id="shadeLabel">0%</span>
       <input id="shade" type="range" min="-30" max="30" step="1" value="0">
+    </label>
+    <label id="starSizeRow">星の大きさ <span id="starSizeLabel">1倍</span>
+      <input id="starSize" type="range" min="1" max="5" step="0.1" value="1">
     </label>
     <div class="row">
       <button id="full" type="button">全画面</button>
