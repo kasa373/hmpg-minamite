@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>MinaStar</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <canvas id="sky" aria-label="星空"></canvas>
+  <div id="globeWrap">
+    <canvas id="globe" aria-label="現在地の地球儀"></canvas>
+  </div>
+  <div id="hud">
+    <p id="hudText">星空を読み込んでいます</p>
+    <div id="float">
+      <button id="btn9" type="button" hidden>9等星</button>
+      <button id="btn10" type="button" hidden>10等星</button>
+      <button id="btn11" type="button" hidden>11等星</button>
+      <button id="zoomOut" type="button" aria-label="ズームアウト">−</button>
+      <button id="zoomIn" type="button" aria-label="ズームイン">＋</button>
+      <button id="zenith" type="button">天頂</button>
+      <button id="lookN" type="button">北</button>
+      <button id="lookE" type="button">東</button>
+      <button id="lookS" type="button">南</button>
+      <button id="lookW" type="button">西</button>
+      <button id="playHud" type="button">再生</button>
+      <button id="panelToggle" type="button">操作</button>
+    </div>
+  </div>
+  <form id="panel">
+    <header>
+      <h1>MinaStar</h1>
+      <p>世界を一周するか、今の場所で時間を進める</p>
+    </header>
+
+    <fieldset>
+      <legend>出発地</legend>
+      <label>選び方
+        <select id="placeKind">
+          <option value="city">世界の都市</option>
+          <option value="japan">都道府県</option>
+          <option value="geo">現在地</option>
+        </select>
+      </label>
+      <div id="cityPlace" hidden>
+        <label>都市
+          <select id="city"></select>
+        </label>
+      </div>
+      <div id="japanPlace">
+        <label>都道府県
+          <select id="pref"></select>
+        </label>
+        <label>町名
+          <input id="town" type="search" placeholder="軽井沢、美しが丘" autocomplete="off">
+        </label>
+        <ul id="townList" hidden></ul>
+      </div>
+      <div id="geoPlace" hidden>
+        <div class="row">
+          <button id="locate" type="button">現在地を取得</button>
+        </div>
+        <p id="locateNote" class="note"></p>
+      </div>
+      <div class="pair">
+        <label>緯度
+          <input id="lat" type="number" step="0.0001" min="-90" max="90">
+        </label>
+        <label>経度
+          <input id="lon" type="number" step="0.0001" min="-180" max="180">
+        </label>
+      </div>
+      <p id="placeName" class="note"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend id="whenLegend">固定する瞬間（日本時間）</legend>
+      <label>日時
+        <input id="when" type="datetime-local">
+      </label>
+      <div class="row">
+        <button id="whenNow" type="button">現在時間</button>
+        <button id="whenPrev" type="button">−1日</button>
+        <button id="whenNext" type="button">＋1日</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>再生</legend>
+      <label>進み方
+        <select id="playMode">
+          <option value="world">時間固定で世界一周旅行</option>
+          <option value="here">現在地で時間旅行</option>
+        </select>
+      </label>
+      <div id="worldOpts">
+        <label>向き
+          <select id="dir">
+            <option value="east">東まわり</option>
+            <option value="west">西まわり</option>
+          </select>
+        </label>
+        <label>コース <span id="tiltLabel">真東（緯度を保つ）</span>
+          <input id="tilt" type="range" min="-60" max="60" step="1" value="0">
+        </label>
+        <label>一周の時間（分）
+          <input id="minutes" type="number" min="1" max="240" step="1" value="30">
+        </label>
+      </div>
+      <div id="hereOpts" hidden>
+        <label>1日の時間（分）
+          <input id="dayMinutes" type="number" min="1" max="1440" step="1" value="30">
+        </label>
+      </div>
+      <div class="row">
+        <button id="play" type="button">再生</button>
+        <button id="restart" type="button">最初に戻す</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>星</legend>
+      <label>どこまで出すか <span id="magLabel">6等星</span>
+        <input id="mag" type="range" min="3" max="8" step="1" value="6">
+      </label>
+      <label>北の向き <span id="northLabel">0°</span>
+        <input id="north" type="range" min="0" max="360" step="1" value="0">
+      </label>
+      <p class="note">星をクリックすると、下に説明が出ます。9等星・10等星・11等星は、最大ズームで止めたときだけ出ます。</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>音楽（この端末の中だけ）</legend>
+      <div class="row">
+        <button id="pickFiles" type="button">曲を選ぶ</button>
+        <button id="pickDir" type="button" hidden>フォルダ</button>
+        <button id="musicToggle" type="button">再生</button>
+      </div>
+      <input id="files" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg" multiple hidden>
+      <label>音量
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.7">
+      </label>
+      <label class="check"><input id="loop" type="checkbox" checked> 繰り返し</label>
+      <label class="check"><input id="shuffle" type="checkbox"> シャッフル</label>
+      <p id="trackName" class="note">曲がまだありません</p>
+    </fieldset>
+
+    <div class="row">
+      <button id="full" type="button">全画面</button>
+      <button id="hide" type="button">操作を隠す</button>
+    </div>
+    <p class="credit">星: Hipparcos / Tycho-2（ESA）。星座線: Olaf Frohn, d3-celestial（BSD）。陸地: Natural Earth。地名: 国土交通省 位置参照情報（Geolonia 住所データ）。</p>
+  </form>
+  <aside id="starCard" hidden aria-live="polite">
+    <div class="sheet">
+      <div class="sheetHead">
+        <h2 id="starTitle"></h2>
+        <button id="starClose" type="button">閉じる</button>
+      </div>
+      <p id="starSub"></p>
+      <dl id="starFacts"></dl>
+    </div>
+  </aside>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
