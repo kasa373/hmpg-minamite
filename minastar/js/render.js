@@ -590,6 +590,39 @@ export function createRenderer(canvas) {
       ctx.fillText(label, raised.x, raised.y - 2 * dpr);
     }
 
+    if (state.meteors && state.meteors.length) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const m of state.meteors) {
+        const u = Math.min(1, m.age / m.life);
+        const fade = Math.sin(u * Math.PI);
+        if (fade < 0.05) continue;
+        const t0 = Math.max(0, u - m.tailFrac);
+        const pts = [];
+        for (let i = 0; i <= 7; i++) {
+          const t = t0 + (u - t0) * (i / 7);
+          const p = projectBody(horizontalToEq(m.az0 + m.dAz * t, m.alt0 + m.dAlt * t), true);
+          if (!p) {
+            if (pts.length) break;
+            continue;
+          }
+          pts.push(p);
+        }
+        if (pts.length < 2) continue;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.strokeStyle = `rgba(186, 208, 255, ${0.35 * fade})`;
+        ctx.lineWidth = Math.max(2.4, 3 * dpr);
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.92 * fade})`;
+        ctx.lineWidth = Math.max(1, 1.25 * dpr);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     lastPick = {
       project: projectRaDec,
       cx, cy, radius: focal, dpr,

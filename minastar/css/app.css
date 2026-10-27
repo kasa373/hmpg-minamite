@@ -28,6 +28,9 @@ body.buttons-hidden #float .hudRow { display: none; }
 
 body.buttons-hidden #showButtons { display: inline-block; }
 
+body.buttons-hidden.cursor-idle,
+body.buttons-hidden.cursor-idle * { cursor: none !important; }
+
 #sky {
   position: fixed;
   inset: 0;
@@ -62,6 +65,11 @@ body.buttons-hidden #showButtons { display: inline-block; }
   white-space: pre-line;
 }
 
+body.playing #hudText {
+  color: #9aa3b3;
+  background: rgba(0, 0, 0, 0.28);
+}
+
 #float {
   display: flex;
   flex-direction: column;
@@ -94,6 +102,14 @@ button, select, input[type="number"], input[type="datetime-local"], input[type="
 button {
   padding: 7px 12px;
   cursor: pointer;
+}
+
+button.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  line-height: 0;
 }
 
 button.on, button.playing {
@@ -183,7 +199,7 @@ input[type="search"], input[type="number"], input[type="datetime-local"], select
   line-height: 1.45;
 }
 
-#townList {
+#townList, #starList {
   list-style: none;
   margin: 4px 0 0;
   padding: 0;
@@ -194,7 +210,7 @@ input[type="search"], input[type="number"], input[type="datetime-local"], select
   background: #0c1018;
 }
 
-#townList button {
+#townList button, #starList button {
   width: 100%;
   text-align: left;
   border: 0;
@@ -202,7 +218,7 @@ input[type="search"], input[type="number"], input[type="datetime-local"], select
   background: transparent;
 }
 
-#townList button:hover { background: #1c2433; }
+#townList button:hover, #starList button:hover { background: #1c2433; }
 
 #globeWrap {
   position: fixed;
@@ -214,6 +230,8 @@ input[type="search"], input[type="number"], input[type="datetime-local"], select
   pointer-events: none;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
 }
+
+body.playing #globeWrap { opacity: 0.55; }
 
 #globe {
   display: block;

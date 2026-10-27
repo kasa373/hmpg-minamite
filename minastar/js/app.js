@@ -48,6 +48,7 @@ const starSizeEl = $('starSize');
 const linesEl = $('showLines');
 const namesEl = $('showNames');
 const infoEl = $('showInfo');
+const meteorsEl = $('showMeteors');
 const hudText = $('hudText');
 const faintButtons = [9, 10, 11].map((mag) => ({ mag, el: $(`btn${mag}`) }));
 
@@ -116,6 +117,7 @@ starSizeEl.value = saved.starSize == null || saved.starSize === '' ? '1' : saved
 linesEl.checked = saved.lines !== false;
 namesEl.checked = saved.names !== false;
 infoEl.checked = saved.info !== false;
+meteorsEl.checked = saved.meteors === true;
 $('dir').value = saved.dir || 'east';
 $('volume').value = saved.volume ?? 0.7;
 cityEl.value = saved.city || '';
@@ -147,6 +149,7 @@ function saveSettings() {
     playMode: playModeEl.value, tilt: tiltEl.value,
     north: northEl.value, shade: shadeEl.value, starSize: starSizeEl.value,
     lines: linesEl.checked, names: namesEl.checked, info: infoEl.checked,
+    meteors: meteorsEl.checked,
     dir: $('dir').value, volume: $('volume').value,
     when: whenEl.value, city: cityEl.value, placeKind: placeKindEl.value,
   }));
@@ -199,6 +202,7 @@ function syncPlayButtons() {
   $('playHud').textContent = label;
   $('play').classList.toggle('playing', playing);
   $('playHud').classList.toggle('playing', playing);
+  document.body.classList.toggle('playing', playing);
 }
 
 function disableFaint() {
@@ -230,10 +234,12 @@ function updateFaintButton() {
   $('zoomOut').disabled = locked;
 }
 
+const WIDE_MAX = 46 * 1.28 * 1.28;
+
 function setRadius(next) {
   const wasMax = atMaxZoom();
   zoomPower = 1;
-  viewRadius = Math.max(MIN_R, Math.min(46, next));
+  viewRadius = Math.max(MIN_R, Math.min(WIDE_MAX, next));
   if (wasMax && !atMaxZoom()) disableFaint();
   updateFaintButton();
 }
@@ -538,6 +544,10 @@ starSizeEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 linesEl.addEventListener('change', saveSettings);
 namesEl.addEventListener('change', saveSettings);
 infoEl.addEventListener('change', () => { updateLabels(); saveSettings(); });
+meteorsEl.addEventListener('change', () => {
+  if (!meteorsEl.checked) meteors.length = 0;
+  saveSettings();
+});
 
 function togglePlay() {
   playing = !playing;
@@ -549,11 +559,13 @@ function togglePlay() {
   syncPlayButtons();
 }
 
+const LOOK_R = 32 * 1.28 * 1.28;
+
 function horizonAlt() {
   const rect = canvas.getBoundingClientRect();
   const w = Math.max(1, rect.width);
   const h = Math.max(1, rect.height);
-  const focal = Math.max(w, h) / 2 / Math.tan(32 * Math.PI / 180);
+  const focal = Math.max(w, h) / 2 / Math.tan(LOOK_R * Math.PI / 180);
   const margin = Math.min(64, Math.max(40, h * 0.055));
   const below = Math.max(12, h / 2 - margin);
   return Math.atan(below / focal) * 180 / Math.PI;
@@ -561,18 +573,162 @@ function horizonAlt() {
 
 function lookSky(alt, az) {
   zoomPower = 1;
-  viewRadius = 32;
+  viewRadius = LOOK_R;
   centerAlt = alt;
   centerAz = az;
   disableFaint();
   updateFaintButton();
 }
 
+const starQuery = $('starQuery');
+const starList = $('starList');
+let starHits = [];
+
+function toKata(text) {
+  return text.trim().replace(/[\u3041-\u3096]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+}
+
+function skyQuery(text) {
+  return toKata(text).replace(/\s+/g, '').replace(/座$/u, '');
+}
+
+function matchRank(name, query) {
+  const n = toKata(name);
+  if (n === query) return 0;
+  if (n.startsWith(query)) return 1;
+  if (n.includes(query)) return 2;
+  return 9;
+}
+
+function nearestCons(ra, dec) {
+  let best = '';
+  let bestSep = 10 * Math.PI / 180;
+  const here = raDecToVec(ra, dec);
+  for (const c of sky.constellations) {
+    for (const seg of c.lines) {
+      for (const pt of seg) {
+        const there = raDecToVec(pt[0], pt[1]);
+        const dot = here[0] * there[0] + here[1] * there[1] + here[2] * there[2];
+        const sep = Math.acos(Math.max(-1, Math.min(1, dot)));
+        if (sep < bestSep) {
+          bestSep = sep;
+          best = c.name;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function searchCatalog() {
+  const jd = julianDate(skyDate());
+  const items = [];
+  for (const s of sky.stars) {
+    items.push({
+      label: s.name, kind: 'star', ra: s.ra, dec: s.dec, mag: s.mag, ofDate: false,
+    });
+  }
+  for (const c of sky.constellations) {
+    items.push({
+      label: c.name, kind: 'constellation', ra: c.label[0], dec: c.label[1], ofDate: false,
+    });
+  }
+  items.push({
+    label: 'すばる', aliases: ['プレアデス'], kind: 'cluster', ra: 56.87, dec: 24.11, ofDate: false,
+  });
+  for (const [label, key] of [['金星', 'venus'], ['火星', 'mars'], ['木星', 'jupiter'], ['土星', 'saturn']]) {
+    const p = planetRaDec(key, jd);
+    items.push({ label, kind: 'planet', ra: p.ra, dec: p.dec, ofDate: true });
+  }
+  const moon = moonRaDec(jd);
+  items.push({ label: '月', kind: 'moon', ra: moon.ra, dec: moon.dec, ofDate: true, illum: moon.illum });
+  const sun = sunRaDec(jd);
+  items.push({ label: '太陽', kind: 'sun', ra: sun[0], dec: sun[1], ofDate: true });
+  return items;
+}
+
+function searchSky() {
+  const query = skyQuery(starQuery.value);
+  starList.innerHTML = '';
+  starHits = [];
+  if (!query) {
+    starList.hidden = true;
+    return;
+  }
+  const ranked = [];
+  for (const item of searchCatalog()) {
+    const names = [item.label, ...(item.aliases || [])];
+    let rank = 9;
+    for (const name of names) rank = Math.min(rank, matchRank(name, query));
+    if (rank < 9) ranked.push({ rank, item });
+  }
+  ranked.sort((a, b) => a.rank - b.rank || a.item.label.localeCompare(b.item.label, 'ja'));
+  starHits = ranked.slice(0, 12).map((row) => row.item);
+  if (!starHits.length) {
+    starList.hidden = true;
+    return;
+  }
+  for (const item of starHits) {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    const tail = item.kind === 'constellation' ? '座' : item.kind === 'cluster' ? ' 星団' : '';
+    b.textContent = `${item.label}${tail}`;
+    b.addEventListener('click', () => chooseSky(item));
+    li.appendChild(b);
+    starList.appendChild(li);
+  }
+  starList.hidden = false;
+}
+
+function chooseSky(item) {
+  starQuery.value = item.label;
+  starList.hidden = true;
+  const here = observer();
+  const jd = julianDate(skyDate());
+  const lst = gmstDeg(jd) + here.lon;
+  const precess = precessionMatrix(jd);
+  const eq = item.ofDate ? raDecToVec(item.ra, item.dec) : apply3(precess, raDecToVec(item.ra, item.dec));
+  const h = apply3(horizontalMatrix(here.lat, lst), eq);
+  const alt = Math.asin(Math.max(-1, Math.min(1, h[2]))) * 180 / Math.PI;
+  const az = normDeg(Math.atan2(h[0], h[1]) * 180 / Math.PI);
+  lookSky(Math.max(-15, Math.min(90, alt)), az);
+  if (item.kind === 'constellation' || item.kind === 'cluster') {
+    closeStar();
+    return;
+  }
+  openStar({
+    kind: item.kind,
+    title: item.label,
+    ra: item.ra,
+    dec: item.dec,
+    mag: item.mag,
+    ofDate: item.ofDate,
+    illum: item.illum,
+    constellation: item.kind === 'star' ? nearestCons(item.ra, item.dec) : '',
+  });
+}
+
+starQuery.addEventListener('input', searchSky);
+starQuery.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (starHits[0]) chooseSky(starHits[0]);
+});
+document.addEventListener('pointerdown', (e) => {
+  if (e.target === starQuery || starList.contains(e.target)) return;
+  starList.hidden = true;
+});
+
 $('play').addEventListener('click', togglePlay);
 $('playHud').addEventListener('click', togglePlay);
 $('restart').addEventListener('click', () => { fraction = 0; playing = false; syncPlayButtons(); updateFaintButton(); });
 $('zoomIn').addEventListener('click', () => setRadius(viewRadius * 0.72));
 $('zoomOut').addEventListener('click', () => setRadius(viewRadius * 1.28));
+$('homeView').addEventListener('click', () => {
+  setWhen(new Date());
+  lookSky(horizonAlt(), 180);
+});
 $('zenith').addEventListener('click', () => lookSky(90, 0));
 $('lookN').addEventListener('click', () => lookSky(horizonAlt(), 0));
 $('lookE').addEventListener('click', () => lookSky(horizonAlt(), 90));
@@ -584,8 +740,30 @@ $('full').addEventListener('click', () => {
 });
 $('hide').addEventListener('click', () => document.body.classList.add('panel-hidden'));
 $('panelToggle').addEventListener('click', () => document.body.classList.toggle('panel-hidden'));
-$('hideButtons').addEventListener('click', () => document.body.classList.add('buttons-hidden'));
-$('showButtons').addEventListener('click', () => document.body.classList.remove('buttons-hidden'));
+let cursorTimer = 0;
+function showCursor() {
+  document.body.classList.remove('cursor-idle');
+  clearTimeout(cursorTimer);
+}
+function armCursorHide() {
+  showCursor();
+  if (!document.body.classList.contains('buttons-hidden')) return;
+  cursorTimer = setTimeout(() => {
+    if (document.body.classList.contains('buttons-hidden')) document.body.classList.add('cursor-idle');
+  }, 2000);
+}
+$('hideButtons').addEventListener('click', () => {
+  document.body.classList.add('buttons-hidden');
+  armCursorHide();
+});
+$('showButtons').addEventListener('click', () => {
+  document.body.classList.remove('buttons-hidden');
+  showCursor();
+});
+window.addEventListener('pointermove', (e) => {
+  if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+  if (document.body.classList.contains('buttons-hidden')) armCursorHide();
+});
 
 for (const b of faintButtons) {
   b.el.addEventListener('click', () => chooseFaint(b));
@@ -814,7 +992,45 @@ canvas.addEventListener('wheel', (e) => {
   setRadius(viewRadius * (e.deltaY > 0 ? 1.12 : 0.88));
 }, { passive: false });
 
+const meteors = [];
+const METEOR_PER_SEC = 0.2;
+
+function spawnMeteor() {
+  const alt0 = 18 + Math.random() * 55;
+  const az0 = Math.random() * 360;
+  const life = 0.35 + Math.random() * 0.45;
+  const dist = (12 + Math.random() * 18) * life;
+  const bearing = Math.random() * Math.PI * 2;
+  meteors.push({
+    alt0,
+    az0,
+    dAlt: Math.cos(bearing) * dist,
+    dAz: Math.sin(bearing) * dist / Math.max(0.3, Math.cos(alt0 * Math.PI / 180)),
+    age: 0,
+    life,
+    tailFrac: 0.28 + Math.random() * 0.32,
+  });
+}
+
+function stepMeteors(dtMs) {
+  if (!meteorsEl.checked) {
+    meteors.length = 0;
+    return;
+  }
+  const dt = Math.min(0.1, Math.max(0, dtMs) / 1000);
+  if (dt > 0 && meteors.length < 6 && Math.random() < 1 - Math.exp(-METEOR_PER_SEC * dt)) spawnMeteor();
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    meteors[i].age += dt;
+    if (meteors[i].age >= meteors[i].life) meteors.splice(i, 1);
+  }
+}
+
+let meteorTick = 0;
+
 function frame(now) {
+  const meteorDt = meteorTick ? Math.min(100, now - meteorTick) : 0;
+  meteorTick = now;
+  stepMeteors(meteorDt);
   if (playing) {
     const dt = lastTick ? Math.min(100, now - lastTick) : 0;
     lastTick = now;
@@ -872,6 +1088,7 @@ function frame(now) {
     sun: { ra: sun[0], dec: sun[1] },
     moon,
     planets,
+    meteors,
   }) || layout;
   hud(here, utc);
   globe.draw({

@@ -29,6 +29,13 @@
       <div class="hudRow">
       <button id="zoomOut" type="button" aria-label="ズームアウト">−</button>
       <button id="zoomIn" type="button" aria-label="ズームイン">＋</button>
+      <button id="homeView" class="icon" type="button" aria-label="出発地の現在時刻、南向きに戻す">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="12" cy="12" r="1.35" fill="currentColor"/>
+          <path d="M12 2.4v3.3M12 18.3v3.3M2.4 12h3.3M18.3 12h3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
       <button id="zenith" type="button">天頂</button>
       <button id="lookN" type="button">北</button>
       <button id="lookE" type="button">東</button>
@@ -134,6 +141,10 @@
 
     <fieldset>
       <legend>星</legend>
+      <label>探す
+        <input id="starQuery" type="search" placeholder="シリウス、オリオン" autocomplete="off">
+      </label>
+      <ul id="starList" hidden></ul>
       <label>どこまで出すか <span id="magLabel">6等星</span>
         <input id="mag" type="range" min="3" max="8" step="1" value="6">
       </label>
@@ -143,6 +154,7 @@
       <label class="check"><input id="showLines" type="checkbox" checked> 星座線</label>
       <label class="check"><input id="showNames" type="checkbox" checked> 星座名</label>
       <label class="check"><input id="showInfo" type="checkbox" checked> 現在地情報</label>
+      <label class="check"><input id="showMeteors" type="checkbox"> 流星</label>
       <p class="note">星をクリックすると、下に説明が出ます。9等星・10等星・11等星は、最大ズームで止めたときだけ出ます。</p>
     </fieldset>
 
