@@ -171,6 +171,15 @@ main {
   color: var(--text);
 }
 
+.news-list a {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.news-list a:hover {
+  color: var(--line);
+}
+
 /* Products */
 .products {
   width: 100%;
