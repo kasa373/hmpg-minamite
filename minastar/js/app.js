@@ -2,11 +2,11 @@ import {
   apply3, formatJst, formatLatLon, formatSolar, gmstDeg, horizontalMatrix,
   julianDate, jstInputToDate, moonRaDec, normDeg, planetRaDec, precessionMatrix,
   raDecToVec, routePoint, sunRaDec,
-} from './astro.js';
+} from './astro.js?v=20';
 import { CITIES } from './cities.js';
 import { isLand, prepareLand } from './land.js';
-import { createGlobe } from './globe.js';
-import { createRenderer, decodeStars, indexFaint } from './render.js?v=17';
+import { createGlobe } from './globe.js?v=19';
+import { createRenderer, decodeStars, indexFaint } from './render.js?v=21';
 
 const PREFS = [
   ['01', '北海道'], ['02', '青森県'], ['03', '岩手県'], ['04', '宮城県'],
@@ -117,7 +117,9 @@ prefEl.value = saved.pref || '13';
 magEl.value = saved.mag || '6';
 minutesEl.value = saved.minutes || '30';
 dayMinutesEl.value = saved.dayMinutes || '30';
-playModeEl.value = saved.playMode === 'here' ? 'here' : 'world';
+playModeEl.value = saved.playMode === 'here' || saved.playMode === 'now' || saved.playMode === 'iss'
+  ? saved.playMode
+  : 'world';
 tiltEl.value = saved.tilt == null || saved.tilt === '' ? '-45' : saved.tilt;
 northEl.value = saved.north || '0';
 shadeEl.value = saved.shade ?? '0';
@@ -174,13 +176,114 @@ function startLatLon() {
   };
 }
 
+function playMode() {
+  const mode = playModeEl.value;
+  return mode === 'here' || mode === 'now' || mode === 'iss' ? mode : 'world';
+}
+
 function hereMode() {
-  return playModeEl.value === 'here';
+  return playMode() === 'here';
+}
+
+function nowMode() {
+  return playMode() === 'now';
+}
+
+function issMode() {
+  return playMode() === 'iss';
+}
+
+const ISS_URLS = [
+  'https://api.wheretheiss.at/v1/satellites/25544',
+  'https://api.open-notify.org/iss-now.json',
+];
+let issSamples = [];
+let issTrail = [];
+let issHold = null;
+let issFetching = false;
+let issNextPoll = 0;
+let issStatus = '';
+
+function wrapLon(lon) {
+  return ((lon + 180) % 360 + 360) % 360 - 180;
+}
+
+function clearIss() {
+  issSamples = [];
+  issTrail = [];
+  issHold = null;
+  issFetching = false;
+  issNextPoll = 0;
+  issStatus = '';
+}
+
+function issAt(nowMs) {
+  if (!issSamples.length) return issHold;
+  if (issSamples.length === 1) return issSamples[0];
+  const a = issSamples[issSamples.length - 2];
+  const b = issSamples[issSamples.length - 1];
+  const span = Math.max(1000, b.t - a.t);
+  const u = Math.max(0, Math.min(1.8, (nowMs - a.t) / span));
+  let dLon = b.lon - a.lon;
+  if (dLon > 180) dLon -= 360;
+  if (dLon < -180) dLon += 360;
+  return {
+    lat: Math.max(-85, Math.min(85, a.lat + (b.lat - a.lat) * u)),
+    lon: wrapLon(a.lon + dLon * u),
+  };
+}
+
+function pushIssTrail(pos) {
+  const last = issTrail[issTrail.length - 1];
+  if (last) {
+    let dLon = pos.lon - last.lon;
+    if (dLon > 180) dLon -= 360;
+    if (dLon < -180) dLon += 360;
+    if (dLon * dLon + (pos.lat - last.lat) ** 2 < 0.04) return;
+  }
+  issTrail.push({ lat: pos.lat, lon: pos.lon });
+  if (issTrail.length > 900) issTrail.splice(0, issTrail.length - 900);
+}
+
+async function readIss() {
+  let lastError = null;
+  for (const url of ISS_URLS) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('iss');
+      const data = await res.json();
+      const lat = Number(data.latitude ?? data.iss_position?.latitude);
+      const lon = Number(data.longitude ?? data.iss_position?.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('iss');
+      return { lat, lon: wrapLon(lon), t: Date.now() };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('iss');
+}
+
+async function refreshIss() {
+  if (issFetching || !playing || !issMode()) return;
+  issFetching = true;
+  if (!issSamples.length) issStatus = 'ISSの位置を取得しています';
+  try {
+    const fix = await readIss();
+    if (!playing || !issMode()) return;
+    issSamples.push(fix);
+    if (issSamples.length > 6) issSamples.splice(0, issSamples.length - 6);
+    issStatus = '';
+  } catch {
+    if (playing && issMode()) issStatus = 'ISSの位置を取得できません';
+  } finally {
+    issFetching = false;
+  }
 }
 
 function observer() {
   const start = startLatLon();
   if (hereMode()) return start;
+  if (issMode()) return issHold || start;
   return routePoint(start.lat, start.lon, Number(tiltEl.value), $('dir').value === 'west', fraction);
 }
 
@@ -194,7 +297,10 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 }
 
 function worldTourMoved() {
-  return !hereMode() && (playing || (fraction > 0 && fraction < 1));
+  if (hereMode()) return false;
+  if (issMode()) return playing;
+  const wrapped = ((fraction % 1) + 1) % 1;
+  return playing || (wrapped > 1e-6 && wrapped < 1 - 1e-6);
 }
 
 function stepLandVis() {
@@ -228,6 +334,7 @@ function flightLine() {
 }
 
 function skyDate() {
+  if (nowMode() || issMode()) return new Date();
   const base = jstInputToDate(whenEl.value);
   if (!hereMode()) return base;
   return new Date(base.getTime() + fraction * 86400000);
@@ -237,12 +344,13 @@ function resetRoute() {
   fraction = 0;
   playing = false;
   lastTick = 0;
+  clearIss();
   disableFaint();
   syncPlayButtons();
 }
 
 function syncPlayButtons() {
-  const label = playing ? '一時停止' : '再生';
+  const label = playing ? '停止' : '再生';
   $('play').textContent = label;
   $('playHud').textContent = label;
   $('play').classList.toggle('playing', playing);
@@ -397,24 +505,32 @@ function updateLabels() {
   $('cityPlace').hidden = kind !== 'city';
   $('japanPlace').hidden = kind !== 'japan';
   $('geoPlace').hidden = kind !== 'geo';
-  const playingHere = hereMode();
-  $('worldOpts').hidden = playingHere;
-  $('hereOpts').hidden = !playingHere;
-  $('whenLegend').textContent = playingHere ? '始めの日時（日本時間）' : '固定する瞬間（日本時間）';
+  const mode = playMode();
+  $('worldOpts').hidden = mode === 'here' || mode === 'iss';
+  $('hereOpts').hidden = mode !== 'here';
+  $('whenBox').hidden = mode === 'now' || mode === 'iss';
+  $('nowNote').hidden = mode !== 'now';
+  $('issNote').hidden = mode !== 'iss';
+  $('whenLegend').textContent = mode === 'here' ? '始めの日時（日本時間）' : '固定する瞬間（日本時間）';
 }
 
 function hud(here, utc) {
   const moon = moonRaDec(julianDate(utc));
   const wrapped = ((fraction % 1) + 1) % 1;
-  const lap = !hereMode() && fraction >= 1 && wrapped === 0
+  const lap = !hereMode() && !nowMode() && fraction >= 1 && wrapped === 0
     ? 100
     : Math.round(wrapped * 100);
-  const clock = hereMode()
-    ? `${formatJst(utc)} 日本時間`
-    : `固定 ${formatJst(utc)} 日本時間`;
-  const progress = hereMode() ? `1日 ${lap}%` : `一周 ${lap}%`;
+  const tracking = issMode();
+  const clock = nowMode() || tracking
+    ? `現在 ${formatJst(utc)} 日本時間`
+    : hereMode()
+      ? `${formatJst(utc)} 日本時間`
+      : `固定 ${formatJst(utc)} 日本時間`;
+  const progress = tracking
+    ? (issStatus || (playing ? '直下を追跡中' : '停止中'))
+    : hereMode() ? `1日 ${lap}%` : `一周 ${lap}%`;
   hudText.textContent = [
-    placeName,
+    tracking && issHold ? 'ISS直下' : placeName,
     clock,
     `${formatLatLon(here.lat, here.lon)}  ${onLand ? '陸上' : '海上'}  現地 ${formatSolar(utc, here.lon)}`,
     `${progress}　月 ${Math.round(moon.illum * 100)}%`,
@@ -631,6 +747,10 @@ function togglePlay() {
   if (playing) {
     disableFaint();
     lastTick = 0;
+    if (issMode()) {
+      issSamples = [];
+      issNextPoll = 0;
+    }
   }
   updateFaintButton();
   syncPlayButtons();
@@ -799,7 +919,13 @@ document.addEventListener('pointerdown', (e) => {
 
 $('play').addEventListener('click', togglePlay);
 $('playHud').addEventListener('click', togglePlay);
-$('restart').addEventListener('click', () => { fraction = 0; playing = false; syncPlayButtons(); updateFaintButton(); });
+$('restart').addEventListener('click', () => {
+  fraction = 0;
+  playing = false;
+  clearIss();
+  syncPlayButtons();
+  updateFaintButton();
+});
 $('zoomIn').addEventListener('click', () => setRadius(viewRadius * 0.72));
 $('zoomOut').addEventListener('click', () => setRadius(viewRadius * 1.28));
 $('homeView').addEventListener('click', () => {
@@ -811,10 +937,22 @@ $('lookN').addEventListener('click', () => lookSky(horizonAlt(), 0));
 $('lookE').addEventListener('click', () => lookSky(horizonAlt(), 90));
 $('lookS').addEventListener('click', () => lookSky(horizonAlt(), 180));
 $('lookW').addEventListener('click', () => lookSky(horizonAlt(), 270));
-$('full').addEventListener('click', () => {
+function toggleFull() {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
   else document.exitFullscreen?.();
-});
+}
+
+function syncFullButton() {
+  const on = !!document.fullscreenElement;
+  const btn = $('fullHud');
+  btn.textContent = on ? '－' : '□';
+  btn.setAttribute('aria-label', on ? '全画面解除' : '全画面');
+}
+
+$('full').addEventListener('click', toggleFull);
+$('fullHud').addEventListener('click', toggleFull);
+document.addEventListener('fullscreenchange', syncFullButton);
+syncFullButton();
 $('hide').addEventListener('click', () => document.body.classList.add('panel-hidden'));
 $('panelToggle').addEventListener('click', () => document.body.classList.toggle('panel-hidden'));
 let cursorTimer = 0;
@@ -1113,18 +1251,30 @@ function frame(now) {
     const dt = lastTick ? Math.min(100, now - lastTick) : 0;
     lastTick = now;
     travelDt = dt;
-    const minutes = hereMode()
-      ? Math.max(1, Math.min(1440, Number(dayMinutesEl.value) || 30))
-      : Math.max(1, Number(minutesEl.value) || 30);
-    const step = dt / (minutes * 60000);
-    if (!hereMode() && fraction + step >= Math.floor(fraction) + 1) {
-      fraction = Math.floor(fraction) + 1;
-      playing = false;
-      lastTick = 0;
-      syncPlayButtons();
-      updateFaintButton();
+    if (issMode()) {
+      if (now >= issNextPoll) {
+        issNextPoll = now + 4000;
+        refreshIss();
+      }
+      const pos = issAt(Date.now());
+      if (pos) {
+        issHold = { lat: pos.lat, lon: pos.lon };
+        pushIssTrail(issHold);
+      }
     } else {
-      fraction += step;
+      const minutes = hereMode()
+        ? Math.max(1, Math.min(1440, Number(dayMinutesEl.value) || 30))
+        : Math.max(1, Number(minutesEl.value) || 30);
+      const step = dt / (minutes * 60000);
+      if (!hereMode() && !nowMode() && fraction + step >= Math.floor(fraction) + 1) {
+        fraction = Math.floor(fraction) + 1;
+        playing = false;
+        lastTick = 0;
+        syncPlayButtons();
+        updateFaintButton();
+      } else {
+        fraction += step;
+      }
     }
   } else {
     lastTick = 0;
@@ -1179,8 +1329,9 @@ function frame(now) {
   globe.draw({
     lat: here.lat,
     lon: here.lon,
-    route: hereMode() ? null : flightLine(),
+    route: hereMode() ? null : (issMode() ? (issTrail.length > 2 ? issTrail : null) : flightLine()),
     progress: fraction,
+    live: issMode(),
   });
   refreshStar(here.lat, lst, precessionMatrix(jd));
   updateFaintButton();

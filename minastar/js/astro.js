@@ -282,7 +282,7 @@ export function jstInputToDate(value) {
 export function formatJst(date) {
   const t = new Date(date.getTime() + 9 * 3600000);
   const p = (n) => String(n).padStart(2, '0');
-  return `${t.getUTCMonth() + 1}/${t.getUTCDate()} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`;
+  return `${t.getUTCFullYear()}/${t.getUTCMonth() + 1}/${t.getUTCDate()} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`;
 }
 
 export function formatSolar(utcDate, lon) {

@@ -225,20 +225,24 @@ export function createGlobe(canvas) {
     if (state.route && state.route.length > 2) {
       const wide = Math.max(2, px / 70);
       strokeFront(project, state.route, 'rgba(230, 201, 138, 0.5)', wide, cx, cy, radius);
-      const progress = ((state.progress % 1) + 1) % 1;
-      const span = 0.06;
-      const n = state.route.length - 1;
-      let run = [];
-      const flush = () => {
-        if (run.length > 1) strokeFront(project, run, '#ffe7a3', wide * 1.45, cx, cy, radius);
-        run = [];
-      };
-      for (let i = 0; i <= n; i++) {
-        const ahead = ((i / n) - progress + 1) % 1;
-        if (ahead <= span) run.push(state.route[i]);
-        else flush();
+      if (state.live) {
+        strokeFront(project, state.route.slice(-12), '#ffe7a3', wide * 1.45, cx, cy, radius);
+      } else {
+        const progress = ((state.progress % 1) + 1) % 1;
+        const span = 0.06;
+        const n = state.route.length - 1;
+        let run = [];
+        const flush = () => {
+          if (run.length > 1) strokeFront(project, run, '#ffe7a3', wide * 1.45, cx, cy, radius);
+          run = [];
+        };
+        for (let i = 0; i <= n; i++) {
+          const ahead = ((i / n) - progress + 1) % 1;
+          if (ahead <= span) run.push(state.route[i]);
+          else flush();
+        }
+        flush();
       }
-      flush();
     }
 
     const gloss = ctx.createRadialGradient(cx - radius * 0.34, cy - radius * 0.4, radius * 0.02, cx, cy, radius);

@@ -42,6 +42,7 @@
       <button id="lookS" type="button">南</button>
       <button id="lookW" type="button">西</button>
       <button id="playHud" type="button">再生</button>
+      <button id="fullHud" type="button" aria-label="全画面">□</button>
       <button id="panelToggle" type="button">操作</button>
       <button id="hideButtons" type="button" aria-label="ボタンを隠す">>></button>
       </div>
@@ -51,7 +52,7 @@
   <form id="panel">
     <header>
       <h1>MinaStar</h1>
-      <p>世界を一周するか、今の場所で時間を進める</p>
+      <p>世界を一周する、今の時刻で回る、ISSの真下を追う、今の場所で時間を進める</p>
     </header>
 
     <fieldset>
@@ -94,7 +95,7 @@
       <p id="placeName" class="note"></p>
     </fieldset>
 
-    <fieldset>
+    <fieldset id="whenBox">
       <legend id="whenLegend">固定する瞬間（日本時間）</legend>
       <label>日時
         <input id="when" type="datetime-local">
@@ -112,8 +113,12 @@
         <select id="playMode">
           <option value="world">時間固定で世界一周旅行</option>
           <option value="here">現在地で時間旅行</option>
+          <option value="now">現在時刻で世界旅行</option>
+          <option value="iss">ISS直下で周遊</option>
         </select>
       </label>
+      <p id="nowNote" class="note" hidden>今の時刻のまま、停止するまで回り続けます。</p>
+      <p id="issNote" class="note" hidden>ISSの真下を、今の時刻のまま追います。停止するまで続きます。</p>
       <div id="worldOpts">
         <label>向き
           <select id="dir">
@@ -201,6 +206,6 @@
       <dl id="starFacts"></dl>
     </div>
   </aside>
-  <script type="module" src="js/app.js?v=17"></script>
+  <script type="module" src="js/app.js?v=23"></script>
 </body>
 </html>

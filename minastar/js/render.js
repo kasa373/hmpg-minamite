@@ -619,8 +619,8 @@ export function createRenderer(canvas) {
     if (state.showAltitude !== false) {
       ctx.save();
       ctx.lineWidth = Math.max(1, dpr * 0.9);
-      ctx.strokeStyle = 'rgba(176, 198, 224, 0.42)';
-      ctx.fillStyle = 'rgba(214, 226, 242, 0.92)';
+      ctx.strokeStyle = state.playing ? 'rgba(176, 198, 224, 0.12)' : 'rgba(176, 198, 224, 0.42)';
+      ctx.fillStyle = state.playing ? 'rgba(214, 226, 242, 0.26)' : 'rgba(214, 226, 242, 0.92)';
       ctx.font = `${Math.round(12 * dpr)}px "Yu Gothic UI", "Hiragino Sans", sans-serif`;
       ctx.textBaseline = 'middle';
       const placeLabel = (text, pt) => {
