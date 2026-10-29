@@ -6,7 +6,7 @@ import {
 import { CITIES } from './cities.js';
 import { isLand, prepareLand } from './land.js';
 import { createGlobe } from './globe.js';
-import { createRenderer, decodeStars, indexFaint } from './render.js';
+import { createRenderer, decodeStars, indexFaint } from './render.js?v=17';
 
 const PREFS = [
   ['01', '北海道'], ['02', '青森県'], ['03', '岩手県'], ['04', '宮城県'],
@@ -103,7 +103,13 @@ let land = [];
 let sky = { constellations: [], stars: [] };
 let stars = { n: 0, ra: new Float32Array(), dec: new Float32Array(), mag: new Float32Array(), bv: new Float32Array() };
 let onLand = true;
+let landVis = 1;
+let travelDt = 0;
 let layout = { radius: 300, dpr: 1 };
+const LANDMARKS = [
+  ['tower', 35.6586, 139.7454],
+  ['taipei', 25.0336, 121.5645],
+];
 
 latEl.value = saved.lat ?? 35.6812;
 lonEl.value = saved.lon ?? 139.7671;
@@ -176,6 +182,39 @@ function observer() {
   const start = startLatLon();
   if (hereMode()) return start;
   return routePoint(start.lat, start.lon, Number(tiltEl.value), $('dir').value === 'west', fraction);
+}
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function worldTourMoved() {
+  return !hereMode() && (playing || (fraction > 0 && fraction < 1));
+}
+
+function stepLandVis() {
+  const target = onLand ? 1 : 0;
+  if (!worldTourMoved()) {
+    landVis = target;
+    return;
+  }
+  if (!playing) return;
+  const step = Math.max(0, travelDt) / 2800;
+  if (landVis < target) landVis = Math.min(target, landVis + step);
+  else if (landVis > target) landVis = Math.max(target, landVis - step);
+}
+
+function landmarkAt(here) {
+  if (worldTourMoved()) return null;
+  for (const [id, lat, lon] of LANDMARKS) {
+    if (distanceKm(here.lat, here.lon, lat, lon) <= 18) return id;
+  }
+  return null;
 }
 
 function flightLine() {
@@ -1069,9 +1108,11 @@ function frame(now) {
   const meteorDt = meteorTick ? Math.min(100, now - meteorTick) : 0;
   meteorTick = now;
   stepMeteors(meteorDt);
+  travelDt = 0;
   if (playing) {
     const dt = lastTick ? Math.min(100, now - lastTick) : 0;
     lastTick = now;
+    travelDt = dt;
     const minutes = hereMode()
       ? Math.max(1, Math.min(1440, Number(dayMinutesEl.value) || 30))
       : Math.max(1, Number(minutesEl.value) || 30);
@@ -1091,6 +1132,7 @@ function frame(now) {
   const utc = skyDate();
   const here = observer();
   onLand = land.length ? isLand(land, here.lat, here.lon) : true;
+  stepLandVis();
   const jd = julianDate(utc);
   const lst = gmstDeg(jd) + here.lon;
   const sun = sunRaDec(jd);
@@ -1126,6 +1168,8 @@ function frame(now) {
     selected,
     sky,
     onLand,
+    landAlpha: landVis,
+    landmark: landmarkAt(here),
     sun: { ra: sun[0], dec: sun[1] },
     moon,
     planets,

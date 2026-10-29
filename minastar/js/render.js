@@ -17,6 +17,50 @@ function shadeHex(hex, shade) {
   return `rgb(${out[0]},${out[1]},${out[2]})`;
 }
 
+// 地上の低い稜線。周波数は整数にして、北（0°と360°）で高さがつながる。
+function ridgeAltDeg(azDeg) {
+  const a = ((azDeg % 360) + 360) % 360 * Math.PI / 180;
+  const n = 0.50 * Math.sin(a * 2 + 0.4)
+    + 0.34 * Math.sin(a * 5 + 1.8)
+    + 0.20 * Math.sin(a * 9 + 0.6)
+    + 0.12 * Math.sin(a * 17 + 2.4)
+    + 0.07 * Math.sin(a * 23 + 1.1);
+  const h = Math.max(0, Math.min(1, (n + 1.08) / 2.05));
+  return h * h * 2.6;
+}
+
+const MARK_AZ = 175;
+const LANDMARK_DRAW = {
+  tower: {
+    height: 5.2,
+    halfW: 1.15,
+    stroke: 'rgba(224, 112, 72, 0.92)',
+    outline: [
+      [-1.00, 0.00], [-0.62, 0.20], [-0.36, 0.38], [-0.58, 0.40], [-0.58, 0.48],
+      [-0.30, 0.50], [-0.20, 0.66], [-0.36, 0.68], [-0.36, 0.76], [-0.12, 0.78],
+      [-0.045, 0.90], [0.00, 1.00], [0.045, 0.90], [0.12, 0.78], [0.36, 0.76],
+      [0.36, 0.68], [0.20, 0.66], [0.30, 0.50], [0.58, 0.48], [0.58, 0.40],
+      [0.36, 0.38], [0.62, 0.20], [1.00, 0.00],
+    ],
+    holes: [[
+      [-0.52, 0.00], [-0.14, 0.28], [0.14, 0.28], [0.52, 0.00],
+    ]],
+  },
+  taipei: {
+    height: 5.6,
+    halfW: 0.78,
+    stroke: 'rgba(120, 210, 170, 0.92)',
+    outline: [
+      [-1.00, 0.00], [-1.00, 0.16], [-0.78, 0.16], [-0.88, 0.28], [-0.68, 0.28],
+      [-0.68, 0.40], [-0.80, 0.52], [-0.50, 0.52], [-0.50, 0.62], [-0.62, 0.74],
+      [-0.32, 0.74], [-0.32, 0.82], [-0.18, 0.82], [-0.08, 0.94], [0.00, 1.00],
+      [0.08, 0.94], [0.18, 0.82], [0.32, 0.82], [0.32, 0.74], [0.62, 0.74],
+      [0.50, 0.62], [0.50, 0.52], [0.80, 0.52], [0.68, 0.40], [0.68, 0.28],
+      [0.88, 0.28], [0.78, 0.16], [1.00, 0.16], [1.00, 0.00],
+    ],
+  },
+};
+
 export function decodeStars(buffer) {
   const view = new DataView(buffer);
   const n = Math.floor(buffer.byteLength / 6);
@@ -133,6 +177,7 @@ export function createRenderer(canvas) {
       stars, faint, faintIndex, showFaint, faintLimit, sky, onLand,
     } = state;
     const shade = state.shade;
+    const landAlpha = Math.max(0, Math.min(1, state.landAlpha == null ? (onLand ? 1 : 0) : Number(state.landAlpha)));
     const starScale = Math.max(1, Math.min(5, Number(state.starScale) || 1));
     const ground = shadeHex(onLand ? '#16120e' : '#071018', shade);
     const cx = w / 2;
@@ -663,13 +708,98 @@ export function createRenderer(canvas) {
       }
       ctx.restore();
     }
+    if (landAlpha > 0.02) {
+      const nSeg = 360;
+      const parts = [];
+      let part = null;
+      for (let i = 0; i <= nSeg; i++) {
+        const az = (i / nSeg) * 360;
+        const base = projectBody(horizontalToEq(az % 360, 0), false);
+        const top = projectBody(horizontalToEq(az % 360, ridgeAltDeg(az)), false);
+        if (!base || !top) {
+          if (part && part.length > 1) parts.push(part);
+          part = null;
+          continue;
+        }
+        if (!part) part = [];
+        part.push({ base, top });
+      }
+      if (part && part.length > 1) parts.push(part);
+      if (parts.length >= 2) {
+        const head = parts[0][0];
+        const tail = parts[parts.length - 1];
+        const end = tail[tail.length - 1];
+        if (Math.hypot(head.top.x - end.top.x, head.top.y - end.top.y) < 2 * dpr) {
+          parts.unshift(parts.pop().concat(parts.shift()));
+        }
+      }
+      ctx.save();
+      ctx.globalAlpha = landAlpha;
+      ctx.fillStyle = shadeHex('#16120e', shade);
+      ctx.strokeStyle = 'rgba(214, 198, 160, 0.55)';
+      ctx.lineWidth = Math.max(1, 1.25 * dpr);
+      ctx.lineJoin = 'round';
+      for (const seg of parts) {
+        ctx.beginPath();
+        ctx.moveTo(seg[0].base.x, seg[0].base.y);
+        for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].base.x, seg[i].base.y);
+        for (let i = seg.length - 1; i >= 0; i--) ctx.lineTo(seg[i].top.x, seg[i].top.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(seg[0].top.x, seg[0].top.y);
+        for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].top.x, seg[i].top.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    const mark = LANDMARK_DRAW[state.landmark];
+    if (mark) {
+      const foot = landAlpha > 0.02 ? ridgeAltDeg(MARK_AZ) : 0;
+      const at = (nx, ny) => projectBody(
+        horizontalToEq(MARK_AZ + nx * mark.halfW, foot + ny * mark.height),
+        false,
+      );
+      const trace = (pts) => {
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+      };
+      const paint = (shape) => {
+        const outline = shape.outline.map(([nx, ny]) => at(nx, ny));
+        const holes = (shape.holes || []).map((hole) => hole.map(([nx, ny]) => at(nx, ny)));
+        if (!outline.every(Boolean) || !holes.every((hole) => hole.every(Boolean))) return;
+        if (!shape.stroke) return;
+        ctx.beginPath();
+        trace(outline);
+        for (const hole of holes) trace(hole);
+        ctx.strokeStyle = shape.stroke;
+        ctx.lineWidth = Math.max(1, 1.15 * dpr);
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      };
+      for (const shape of mark.layers || [mark]) paint(shape);
+      if (mark.clock) {
+          const [cxn, cyn, rn] = mark.clock;
+          const c = at(cxn, cyn);
+          const e = at(cxn + rn, cyn);
+          if (c && e) {
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, Math.hypot(e.x - c.x, e.y - c.y), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+      }
+    }
+
     const compass = [
       ['北', 0], ['北東', 45], ['東', 90], ['南東', 135],
       ['南', 180], ['南西', 225], ['西', 270], ['北西', 315],
     ];
     for (const [label, maz] of compass) {
-      const base = projectBody(horizontalToEq(maz, 0), false);
-      const raised = projectBody(horizontalToEq(maz, 2.2), true);
+      const skyline = landAlpha > 0.02 ? ridgeAltDeg(maz) : 0;
+      const base = projectBody(horizontalToEq(maz, skyline), false);
+      const raised = projectBody(horizontalToEq(maz, skyline + 2.2), true);
       if (!base || !raised) continue;
       if (base.x < 18 * dpr || base.x > w - 18 * dpr || base.y < 0 || base.y > h - 4 * dpr) continue;
       ctx.strokeStyle = 'rgba(232, 220, 190, 0.55)';
