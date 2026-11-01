@@ -867,7 +867,7 @@ function rideLookAlt() {
   const h = Math.max(1, rect.height);
   const focal = Math.max(w, h) / 2 / Math.tan(LOOK_R * Math.PI / 180);
   const limb = earthLimbDeg(issHold && issHold.alt);
-  const sy = (h * (0.5 - 0.75)) / focal;
+  const sy = (h * (0.5 - (1 - 1 / 5))) / focal;
   return Math.max(-60, Math.min(35, limb - Math.atan(sy) * 180 / Math.PI));
 }
 
