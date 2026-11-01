@@ -120,6 +120,12 @@
       <p id="nowNote" class="note" hidden>今の時刻のまま、停止するまで回り続けます。</p>
       <p id="rideNote" class="note" hidden>ISSから、今の時刻のまま見ます。水平線の下は陸地の輪郭です。停止するまで続きます。</p>
       <p id="hstNote" class="note" hidden>ハッブル宇宙望遠鏡（HST）から、今の時刻のまま見ます。水平線の下は陸地の輪郭です。停止するまで続きます。</p>
+      <div id="orbitOpts" hidden>
+        <label>右へ一周（分）
+          <input id="spinMinutes" type="number" min="0" max="99" step="1" value="0">
+        </label>
+        <p class="note">0は今まで通りです。1以上で、再生すると南から右へ360°回ります。回っているあいだは、ドラッグと倍率は使えません。</p>
+      </div>
       <div id="worldOpts">
         <label>向き
           <select id="dir">
@@ -207,6 +213,6 @@
       <dl id="starFacts"></dl>
     </div>
   </aside>
-  <script type="module" src="js/app.js?v=31"></script>
+  <script type="module" src="js/app.js?v=32"></script>
 </body>
 </html>

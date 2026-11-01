@@ -40,6 +40,7 @@ const whenEl = $('when');
 const tiltEl = $('tilt');
 const minutesEl = $('minutes');
 const dayMinutesEl = $('dayMinutes');
+const spinMinutesEl = $('spinMinutes');
 const playModeEl = $('playMode');
 const magEl = $('mag');
 const northEl = $('north');
@@ -117,6 +118,8 @@ prefEl.value = saved.pref || '13';
 magEl.value = saved.mag || '6';
 minutesEl.value = saved.minutes || '30';
 dayMinutesEl.value = saved.dayMinutes || '30';
+spinMinutesEl.value = saved.spinMinutes == null || saved.spinMinutes === '' ? '0' : saved.spinMinutes;
+spinMinutesEl.value = String(spinMinutes());
 const savedMode = saved.playMode === 'iss' ? 'ride' : saved.playMode;
 playModeEl.value = savedMode === 'here' || savedMode === 'now' || savedMode === 'ride' || savedMode === 'hst'
   ? savedMode
@@ -160,6 +163,7 @@ function saveSettings() {
   localStorage.setItem('minastar-v1', JSON.stringify({
     lat: latEl.value, lon: lonEl.value, pref: prefEl.value, placeName,
     mag: magEl.value, minutes: minutesEl.value, dayMinutes: dayMinutesEl.value,
+    spinMinutes: spinMinutesEl.value,
     playMode: playModeEl.value, tilt: tiltEl.value,
     north: northEl.value, shade: shadeAutoEl.checked ? manualShade : shadeEl.value,
     shadeAuto: shadeAutoEl.checked, starSize: starSizeEl.value,
@@ -200,6 +204,34 @@ function hstMode() {
 
 function orbitMode() {
   return rideMode() || hstMode();
+}
+
+function spinMinutes() {
+  const n = Math.round(Number(spinMinutesEl.value));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(99, n));
+}
+
+function viewSpinning() {
+  return playing && orbitMode() && spinMinutes() > 0;
+}
+
+let spinOn = false;
+
+function stepSpin(dt) {
+  if (!viewSpinning()) {
+    spinOn = false;
+    return;
+  }
+  stopLookGlide();
+  if (!spinOn) {
+    centerAlt = levelAlt();
+    centerAz = 180;
+    spinOn = true;
+    return;
+  }
+  centerAz += 360 * (dt / (spinMinutes() * 60000));
+  centerAlt = levelAlt();
 }
 
 const ISS_URLS = [
@@ -426,14 +458,20 @@ function updateFaintButton() {
     b.el.hidden = !showPower;
     b.el.classList.toggle('on', zoomPower === b.power);
   }
-  const locked = zoomPower > 1;
+  const locked = zoomPower > 1 || viewSpinning();
   $('zoomIn').disabled = locked;
   $('zoomOut').disabled = locked;
+  const spin = viewSpinning();
+  for (const id of ['lookN', 'lookE', 'lookS', 'lookW', 'zenith', 'homeView']) {
+    $(id).disabled = spin;
+  }
+  for (const b of powerButtons) b.el.disabled = spin;
 }
 
 const WIDE_MAX = 46 * 1.28 * 1.28;
 
 function setRadius(next) {
+  if (viewSpinning()) return;
   stopLookGlide();
   const wasMax = atMaxZoom();
   zoomPower = 1;
@@ -443,6 +481,7 @@ function setRadius(next) {
 }
 
 function setPower(power) {
+  if (viewSpinning()) return;
   stopLookGlide();
   zoomPower = power;
   viewRadius = MIN_R / power;
@@ -478,6 +517,7 @@ function azGap(a, b) {
 }
 
 function panBy(dx, dy) {
+  if (viewSpinning()) return;
   if (!dx && !dy) return;
   stopLookGlide();
   const pxR = Math.max(40, layout.radius / Math.max(0.1, layout.dpr));
@@ -560,6 +600,7 @@ function updateLabels() {
   $('nowNote').hidden = mode !== 'now';
   $('rideNote').hidden = mode !== 'ride';
   $('hstNote').hidden = mode !== 'hst';
+  $('orbitOpts').hidden = !orbit;
   $('whenLegend').textContent = mode === 'here' ? '始めの日時（日本時間）' : '固定する瞬間（日本時間）';
 }
 
@@ -799,6 +840,10 @@ meteorsEl.addEventListener('change', () => {
   if (!meteorsEl.checked) meteors.length = 0;
   saveSettings();
 });
+spinMinutesEl.addEventListener('change', () => {
+  spinMinutesEl.value = String(spinMinutes());
+  saveSettings();
+});
 
 function togglePlay() {
   playing = !playing;
@@ -841,6 +886,7 @@ function horizonAlt() {
 }
 
 function lookSky(alt, az) {
+  if (viewSpinning()) return;
   stopLookGlide();
   zoomPower = 1;
   viewRadius = LOOK_R;
@@ -865,6 +911,7 @@ function easeInOut(t) {
 }
 
 function glideSky(alt, az) {
+  if (viewSpinning()) return;
   if (!sameLookZoom()) {
     lookSky(alt, az);
     return;
@@ -1414,6 +1461,7 @@ function frame(now) {
   } else {
     lastTick = 0;
   }
+  stepSpin(travelDt);
   const utc = skyDate();
   const here = observer();
   onLand = land.length ? isLand(land, here.lat, here.lon) : true;
