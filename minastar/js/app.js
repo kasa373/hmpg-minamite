@@ -391,10 +391,14 @@ function resetRoute() {
 
 function syncPlayButtons() {
   const label = playing ? '停止' : '再生';
-  $('play').textContent = label;
-  $('playHud').textContent = label;
-  $('play').classList.toggle('playing', playing);
-  $('playHud').classList.toggle('playing', playing);
+  const mark = playing ? '‖' : '▶';
+  for (const id of ['play', 'playHud']) {
+    const btn = $(id);
+    btn.textContent = mark;
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    btn.classList.toggle('playing', playing);
+  }
   document.body.classList.toggle('playing', playing);
 }
 
@@ -430,6 +434,7 @@ function updateFaintButton() {
 const WIDE_MAX = 46 * 1.28 * 1.28;
 
 function setRadius(next) {
+  stopLookGlide();
   const wasMax = atMaxZoom();
   zoomPower = 1;
   viewRadius = Math.max(MIN_R, Math.min(WIDE_MAX, next));
@@ -438,6 +443,7 @@ function setRadius(next) {
 }
 
 function setPower(power) {
+  stopLookGlide();
   zoomPower = power;
   viewRadius = MIN_R / power;
   updateFaintButton();
@@ -473,6 +479,7 @@ function azGap(a, b) {
 
 function panBy(dx, dy) {
   if (!dx && !dy) return;
+  stopLookGlide();
   const pxR = Math.max(40, layout.radius / Math.max(0.1, layout.dpr));
   const north = Number(northEl.value) * Math.PI / 180;
   const cosN = Math.cos(north);
@@ -834,12 +841,67 @@ function horizonAlt() {
 }
 
 function lookSky(alt, az) {
+  stopLookGlide();
   zoomPower = 1;
   viewRadius = LOOK_R;
   centerAlt = alt;
   centerAz = az;
   disableFaint();
   updateFaintButton();
+}
+
+let lookGlide = null;
+
+function stopLookGlide() {
+  lookGlide = null;
+}
+
+function sameLookZoom() {
+  return zoomPower === 1 && Math.abs(viewRadius - LOOK_R) < 0.05;
+}
+
+function easeInOut(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
+}
+
+function glideSky(alt, az) {
+  if (!sameLookZoom()) {
+    lookSky(alt, az);
+    return;
+  }
+  const dAlt = alt - centerAlt;
+  const dAz = (((az - centerAz) % 360) + 540) % 360 - 180;
+  const turn = Math.max(Math.abs(dAlt), Math.abs(dAz));
+  if (turn < 0.4) {
+    stopLookGlide();
+    centerAlt = alt;
+    centerAz = az;
+    return;
+  }
+  lookGlide = {
+    fromAlt: centerAlt,
+    fromAz: centerAz,
+    toAlt: alt,
+    toAz: az,
+    dAlt,
+    dAz,
+    start: performance.now(),
+    ms: Math.min(2000, Math.max(160, 1000 * (turn / 90))),
+  };
+}
+
+function stepLookGlide(now) {
+  if (!lookGlide) return;
+  const t = Math.min(1, (now - lookGlide.start) / lookGlide.ms);
+  const e = easeInOut(t);
+  if (t >= 1) {
+    centerAlt = lookGlide.toAlt;
+    centerAz = lookGlide.toAz;
+    lookGlide = null;
+    return;
+  }
+  centerAlt = lookGlide.fromAlt + lookGlide.dAlt * e;
+  centerAz = lookGlide.fromAz + lookGlide.dAz * e;
 }
 
 const starQuery = $('starQuery');
@@ -995,13 +1057,13 @@ $('zoomIn').addEventListener('click', () => setRadius(viewRadius * 0.72));
 $('zoomOut').addEventListener('click', () => setRadius(viewRadius * 1.28));
 $('homeView').addEventListener('click', () => {
   setWhen(new Date());
-  lookSky(levelAlt(), 180);
+  glideSky(levelAlt(), 180);
 });
-$('zenith').addEventListener('click', () => lookSky(90, 0));
-$('lookN').addEventListener('click', () => lookSky(levelAlt(), 0));
-$('lookE').addEventListener('click', () => lookSky(levelAlt(), 90));
-$('lookS').addEventListener('click', () => lookSky(levelAlt(), 180));
-$('lookW').addEventListener('click', () => lookSky(levelAlt(), 270));
+$('zenith').addEventListener('click', () => glideSky(90, centerAz));
+$('lookN').addEventListener('click', () => glideSky(levelAlt(), 0));
+$('lookE').addEventListener('click', () => glideSky(levelAlt(), 90));
+$('lookS').addEventListener('click', () => glideSky(levelAlt(), 180));
+$('lookW').addEventListener('click', () => glideSky(levelAlt(), 270));
 function toggleFull() {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
   else document.exitFullscreen?.();
@@ -1010,8 +1072,10 @@ function toggleFull() {
 function syncFullButton() {
   const on = !!document.fullscreenElement;
   const btn = $('fullHud');
-  btn.textContent = on ? '－' : '□';
-  btn.setAttribute('aria-label', on ? '全画面解除' : '全画面');
+  btn.textContent = on ? '⤡' : '⛶';
+  const label = on ? '全画面解除' : '全画面';
+  btn.setAttribute('aria-label', label);
+  btn.title = label;
 }
 
 $('full').addEventListener('click', toggleFull);
@@ -1121,6 +1185,7 @@ window.addEventListener('resize', () => renderer.resize());
 
 const pointers = new Map();
 canvas.addEventListener('pointerdown', (e) => {
+  stopLookGlide();
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
     pointerMoved = false;
@@ -1308,6 +1373,7 @@ function stepMeteors(dtMs) {
 let meteorTick = 0;
 
 function frame(now) {
+  stepLookGlide(now);
   const meteorDt = meteorTick ? Math.min(100, now - meteorTick) : 0;
   meteorTick = now;
   stepMeteors(meteorDt);

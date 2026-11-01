@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>MinaStar</title>
-  <link rel="stylesheet" href="css/app.css?v=4">
+  <link rel="stylesheet" href="css/app.css?v=5">
 </head>
 <body>
   <canvas id="sky" aria-label="星空"></canvas>
@@ -41,8 +41,8 @@
       <button id="lookE" type="button">東</button>
       <button id="lookS" type="button">南</button>
       <button id="lookW" type="button">西</button>
-      <button id="playHud" type="button">再生</button>
-      <button id="fullHud" type="button" aria-label="全画面">□</button>
+      <button id="playHud" class="mark" type="button" aria-label="再生" title="再生">▶</button>
+      <button id="fullHud" class="mark" type="button" aria-label="全画面" title="全画面">⛶</button>
       <button id="panelToggle" type="button">操作</button>
       <button id="hideButtons" type="button" aria-label="ボタンを隠す">>></button>
       </div>
@@ -140,7 +140,7 @@
         </label>
       </div>
       <div class="row">
-        <button id="play" type="button">再生</button>
+        <button id="play" class="mark" type="button" aria-label="再生" title="再生">▶</button>
         <button id="restart" type="button">最初に戻す</button>
       </div>
     </fieldset>
@@ -207,6 +207,6 @@
       <dl id="starFacts"></dl>
     </div>
   </aside>
-  <script type="module" src="js/app.js?v=28"></script>
+  <script type="module" src="js/app.js?v=31"></script>
 </body>
 </html>
