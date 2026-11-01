@@ -29,6 +29,12 @@ function ridgeAltDeg(azDeg) {
   return h * h * 2.6;
 }
 
+// 周回軌道から見た地球の縁。高度 km から、水平線の高度（度。下向きが負）。
+export function earthLimbDeg(altKm) {
+  const h = Math.max(300, Math.min(800, Number(altKm) || 420));
+  return -Math.acos(6371 / (6371 + h)) / DEG;
+}
+
 const MARK_AZ = 175;
 const LANDMARK_DRAW = {
   tower: {
@@ -218,11 +224,15 @@ export function createRenderer(canvas) {
     const ang = Math.max(0.15, viewRadius) * DEG;
     const focal = Math.max(w, h) / 2 / Math.tan(ang);
     const maxAng = Math.atan(Math.hypot(w, h) / 2 / focal) * 1.05;
+    const ride = !!state.ride;
+    const limbDeg = ride ? earthLimbDeg(state.issAltKm) : 0;
+    const floorAlt = ride ? limbDeg * DEG : -0.012;
+    const sunFloor = ride ? floorAlt : -0.02;
 
     function projectBody(vecEq, aboveOnly) {
       const v = apply3(horiz, vecEq);
       const alt = Math.asin(Math.max(-1, Math.min(1, v[2])));
-      if (aboveOnly && alt < -0.012) return null;
+      if (aboveOnly && alt < floorAlt) return null;
       const dot = v[0] * view[0] + v[1] * view[1] + v[2] * view[2];
       if (dot < 0.12) return null;
       const sx = (v[0] * right[0] + v[1] * right[1] + v[2] * right[2]) / dot;
@@ -315,8 +325,9 @@ export function createRenderer(canvas) {
       return pts;
     }
 
+    const horizonDeg = ride ? limbDeg : 0;
     const horizonSamples = [];
-    for (let i = 0; i <= 180; i++) horizonSamples.push(projectBody(horizontalToEq(i * 2, 0), false));
+    for (let i = 0; i <= 180; i++) horizonSamples.push(projectBody(horizontalToEq(i * 2, horizonDeg), false));
     const horizonRuns = [];
     let horizonRun = null;
     for (let i = 0; i < horizonSamples.length - 1; i++) {
@@ -348,11 +359,163 @@ export function createRenderer(canvas) {
         for (let i = 1; i < seg.length; i++) ctx.lineTo(seg[i].x, seg[i].y);
         if (horizonClosed) ctx.closePath();
       }
-      ctx.strokeStyle = 'rgba(214, 198, 160, 0.5)';
-      ctx.lineWidth = Math.max(1, 1.25 * dpr);
+      ctx.strokeStyle = ride ? 'rgba(236, 228, 206, 0.9)' : 'rgba(214, 198, 160, 0.5)';
+      ctx.lineWidth = Math.max(1, (ride ? 1.6 : 1.25) * dpr);
       ctx.stroke();
     }
 
+    function drawEarthCoast() {
+      const polygons = state.land;
+      if (!polygons || !polygons.length || state.lon == null) return;
+      const R = 6371;
+      const hKm = Math.max(300, Math.min(800, Number(state.issAltKm) || 420));
+      const Rs = R + hKm;
+      const limbCos = R / Rs;
+      const lat0 = lat * DEG;
+      const lon0 = state.lon * DEG;
+      const slat = Math.sin(lat0);
+      const clat = Math.cos(lat0);
+      const slon = Math.sin(lon0);
+      const clon = Math.cos(lon0);
+      const east = [-slon, clon, 0];
+      const north = [-slat * clon, -slat * slon, clat];
+      const up = [clat * clon, clat * slon, slat];
+      function projectLoose(altDeg, azDeg) {
+        const altR = altDeg * DEG;
+        const azR = azDeg * DEG;
+        const ca = Math.cos(altR);
+        const v = [ca * Math.sin(azR), ca * Math.cos(azR), Math.sin(altR)];
+        const dot = v[0] * view[0] + v[1] * view[1] + v[2] * view[2];
+        if (dot < 0.08) return null;
+        const sx = (v[0] * right[0] + v[1] * right[1] + v[2] * right[2]) / dot;
+        const sy = (v[0] * up[0] + v[1] * up[1] + v[2] * up[2]) / dot;
+        const dx = sx * focal;
+        const dy = sy * focal;
+        const x = cx + dx * cosN - dy * sinN;
+        const y = cy - (dx * sinN + dy * cosN);
+        if (Math.abs(x) > w * 6 || Math.abs(y) > h * 6) return null;
+        return { x, y };
+      }
+
+      function measure(lonDeg, latDeg) {
+        const phi = latDeg * DEG;
+        const lam = lonDeg * DEG;
+        const cp = Math.cos(phi);
+        const px = cp * Math.cos(lam);
+        const py = cp * Math.sin(lam);
+        const pz = Math.sin(phi);
+        const facing = px * up[0] + py * up[1] + pz * up[2];
+        const dx = R * px - Rs * up[0];
+        const dy = R * py - Rs * up[1];
+        const dz = R * pz - Rs * up[2];
+        const e = dx * east[0] + dy * east[1] + dz * east[2];
+        const n = dx * north[0] + dy * north[1] + dz * north[2];
+        const u = dx * up[0] + dy * up[1] + dz * up[2];
+        const altDeg = Math.atan2(u, Math.hypot(e, n)) / DEG;
+        const azDeg = Math.atan2(e, n) / DEG;
+        const p = facing >= limbCos ? projectLoose(altDeg, azDeg) : null;
+        return { facing, lon: lonDeg, lat: latDeg, p };
+      }
+
+      function edge(vis, hid) {
+        let lo = 0;
+        let hi = 1;
+        let best = vis;
+        for (let k = 0; k < 7; k++) {
+          const t = (lo + hi) / 2;
+          const m = measure(vis.lon + (hid.lon - vis.lon) * t, vis.lat + (hid.lat - vis.lat) * t);
+          if (m.facing >= limbCos) {
+            best = m;
+            lo = t;
+          } else hi = t;
+        }
+        return best.p ? best : null;
+      }
+
+      const limbR = limbDeg * DEG + 0.004;
+      const earthSide = (p) => screenAlt(p.x, p.y) <= limbR;
+      function strokeEarth(a, b) {
+        const stack = [[a, b]];
+        while (stack.length) {
+          const pair = stack.pop();
+          const p = pair[0];
+          const q = pair[1];
+          const len = Math.hypot(q.x - p.x, q.y - p.y);
+          if (len < 0.75) continue;
+          if (len > 64 * dpr && stack.length < 500) {
+            const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+            stack.push([p, mid], [mid, q]);
+            continue;
+          }
+          const pOk = earthSide(p);
+          const qOk = earthSide(q);
+          if (pOk && qOk) {
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            continue;
+          }
+          if (!pOk && !qOk) continue;
+          const ground = pOk ? p : q;
+          const sky = pOk ? q : p;
+          let lo = 0;
+          let hi = 1;
+          let hit = ground;
+          for (let k = 0; k < 8; k++) {
+            const t = (lo + hi) / 2;
+            const m = { x: ground.x + (sky.x - ground.x) * t, y: ground.y + (sky.y - ground.y) * t };
+            if (earthSide(m)) {
+              hit = m;
+              lo = t;
+            } else hi = t;
+          }
+          if (Math.hypot(hit.x - ground.x, hit.y - ground.y) < 0.75) continue;
+          ctx.moveTo(ground.x, ground.y);
+          ctx.lineTo(hit.x, hit.y);
+        }
+      }
+
+      ctx.beginPath();
+      for (const poly of polygons) {
+        for (const ring of poly.rings) {
+          let prev = null;
+          for (let i = 0; i < ring.length; i++) {
+            const lonP = ring[i][0];
+            const latP = ring[i][1];
+            if (prev && Math.abs(lonP - prev.lon) > 180) prev = null;
+            const cur = measure(lonP, latP);
+            if (!prev) {
+              prev = cur;
+              continue;
+            }
+            let a = prev;
+            let b = cur;
+            const aVis = prev.facing >= limbCos && prev.p;
+            const bVis = cur.facing >= limbCos && cur.p;
+            if (aVis !== bVis) {
+              const hit = aVis ? edge(prev, cur) : (bVis ? edge(cur, prev) : null);
+              if (!hit) {
+                prev = cur;
+                continue;
+              }
+              if (aVis) b = hit;
+              else a = hit;
+            } else if (!aVis) {
+              prev = cur;
+              continue;
+            }
+            if (a.p && b.p) strokeEarth(a.p, b.p);
+            prev = cur;
+          }
+        }
+      }
+      ctx.strokeStyle = 'rgba(214, 206, 186, 0.84)';
+      ctx.lineWidth = Math.max(1, 1.15 * dpr);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    if (!ride) {
     ctx.fillStyle = ground;
     if (horizonClosed && horizonRuns[0]) {
       ctx.beginPath();
@@ -406,6 +569,7 @@ export function createRenderer(canvas) {
         }
         ctx.fill();
       }
+    }
     }
 
     buf32.fill(0);
@@ -477,12 +641,13 @@ export function createRenderer(canvas) {
     starCtx.putImageData(pixels, 0, 0);
     ctx.drawImage(starCanvas, 0, 0);
     strokeHorizon();
+    if (ride) drawEarthCoast();
 
     const bodies = [];
     const bodyHits = [];
     const sunVec = raDecToVec(state.sun.ra, state.sun.dec);
     const sunP = projectBody(sunVec, false);
-    if (sunP && sunP.alt > -0.02 && sunP.delta < maxAng) {
+    if (sunP && sunP.alt > sunFloor && sunP.delta < maxAng) {
       const g = ctx.createRadialGradient(sunP.x, sunP.y, 0, sunP.x, sunP.y, 46 * dpr);
       g.addColorStop(0, 'rgba(255, 220, 140, 0.55)');
       g.addColorStop(0.35, 'rgba(255, 170, 70, 0.18)');
@@ -561,7 +726,7 @@ export function createRenderer(canvas) {
       });
     }
 
-    if (sunP && sunP.alt > -0.02 && sunP.delta < maxAng) {
+    if (sunP && sunP.alt > sunFloor && sunP.delta < maxAng) {
       const sr = Math.max(7 * dpr, focal * Math.tan(0.85 * DEG));
       const core = ctx.createRadialGradient(sunP.x, sunP.y, 0, sunP.x, sunP.y, sr);
       core.addColorStop(0, '#fffaf0');
@@ -708,7 +873,7 @@ export function createRenderer(canvas) {
       }
       ctx.restore();
     }
-    if (landAlpha > 0.02) {
+    if (!ride && landAlpha > 0.02) {
       const nSeg = 360;
       const parts = [];
       let part = null;
@@ -754,7 +919,7 @@ export function createRenderer(canvas) {
       ctx.restore();
     }
 
-    const mark = LANDMARK_DRAW[state.landmark];
+    const mark = ride ? null : LANDMARK_DRAW[state.landmark];
     if (mark) {
       const foot = landAlpha > 0.02 ? ridgeAltDeg(MARK_AZ) : 0;
       const at = (nx, ny) => projectBody(
@@ -797,7 +962,7 @@ export function createRenderer(canvas) {
       ['南', 180], ['南西', 225], ['西', 270], ['北西', 315],
     ];
     for (const [label, maz] of compass) {
-      const skyline = landAlpha > 0.02 ? ridgeAltDeg(maz) : 0;
+      const skyline = ride ? limbDeg : (landAlpha > 0.02 ? ridgeAltDeg(maz) : 0);
       const base = projectBody(horizontalToEq(maz, skyline), false);
       const raised = projectBody(horizontalToEq(maz, skyline + 2.2), true);
       if (!base || !raised) continue;

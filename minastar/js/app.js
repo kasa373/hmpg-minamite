@@ -6,7 +6,7 @@ import {
 import { CITIES } from './cities.js';
 import { isLand, prepareLand } from './land.js';
 import { createGlobe } from './globe.js?v=19';
-import { createRenderer, decodeStars, indexFaint } from './render.js?v=21';
+import { createRenderer, decodeStars, earthLimbDeg, indexFaint } from './render.js?v=24';
 
 const PREFS = [
   ['01', '北海道'], ['02', '青森県'], ['03', '岩手県'], ['04', '宮城県'],
@@ -117,8 +117,9 @@ prefEl.value = saved.pref || '13';
 magEl.value = saved.mag || '6';
 minutesEl.value = saved.minutes || '30';
 dayMinutesEl.value = saved.dayMinutes || '30';
-playModeEl.value = saved.playMode === 'here' || saved.playMode === 'now' || saved.playMode === 'iss'
-  ? saved.playMode
+const savedMode = saved.playMode === 'iss' ? 'ride' : saved.playMode;
+playModeEl.value = savedMode === 'here' || savedMode === 'now' || savedMode === 'ride' || savedMode === 'hst'
+  ? savedMode
   : 'world';
 tiltEl.value = saved.tilt == null || saved.tilt === '' ? '-45' : saved.tilt;
 northEl.value = saved.north || '0';
@@ -178,7 +179,7 @@ function startLatLon() {
 
 function playMode() {
   const mode = playModeEl.value;
-  return mode === 'here' || mode === 'now' || mode === 'iss' ? mode : 'world';
+  return mode === 'here' || mode === 'now' || mode === 'ride' || mode === 'hst' ? mode : 'world';
 }
 
 function hereMode() {
@@ -189,8 +190,16 @@ function nowMode() {
   return playMode() === 'now';
 }
 
-function issMode() {
-  return playMode() === 'iss';
+function rideMode() {
+  return playMode() === 'ride';
+}
+
+function hstMode() {
+  return playMode() === 'hst';
+}
+
+function orbitMode() {
+  return rideMode() || hstMode();
 }
 
 const ISS_URLS = [
@@ -227,9 +236,12 @@ function issAt(nowMs) {
   let dLon = b.lon - a.lon;
   if (dLon > 180) dLon -= 360;
   if (dLon < -180) dLon += 360;
+  const altA = Number.isFinite(a.alt) ? a.alt : 420;
+  const altB = Number.isFinite(b.alt) ? b.alt : altA;
   return {
     lat: Math.max(-85, Math.min(85, a.lat + (b.lat - a.lat) * u)),
     lon: wrapLon(a.lon + dLon * u),
+    alt: altA + (altB - altA) * u,
   };
 }
 
@@ -254,8 +266,14 @@ async function readIss() {
       const data = await res.json();
       const lat = Number(data.latitude ?? data.iss_position?.latitude);
       const lon = Number(data.longitude ?? data.iss_position?.longitude);
+      const alt = Number(data.altitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('iss');
-      return { lat, lon: wrapLon(lon), t: Date.now() };
+      return {
+        lat,
+        lon: wrapLon(lon),
+        t: Date.now(),
+        alt: Number.isFinite(alt) && alt > 200 && alt < 900 ? alt : 420,
+      };
     } catch (err) {
       lastError = err;
     }
@@ -263,18 +281,40 @@ async function readIss() {
   throw lastError || new Error('iss');
 }
 
+async function readHst() {
+  const iso = new Date().toISOString().replace(/\.\d{3}Z$/, '+00:00');
+  const url = `https://tle.ivanstanojevic.me/api/tle/20580/propagate?date=${encodeURIComponent(iso)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('hst');
+  const data = await res.json();
+  const lat = Number(data.geodetic?.latitude);
+  const lon = Number(data.geodetic?.longitude);
+  const alt = Number(data.geodetic?.altitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('hst');
+  return {
+    lat,
+    lon: wrapLon(lon),
+    t: Date.now(),
+    alt: Number.isFinite(alt) && alt > 200 && alt < 900 ? alt : 540,
+  };
+}
+
+function craftLabel() {
+  return hstMode() ? 'ハッブル' : 'ISS';
+}
+
 async function refreshIss() {
-  if (issFetching || !playing || !issMode()) return;
+  if (issFetching || !playing || !orbitMode()) return;
   issFetching = true;
-  if (!issSamples.length) issStatus = 'ISSの位置を取得しています';
+  if (!issSamples.length) issStatus = `${craftLabel()}の位置を取得しています`;
   try {
-    const fix = await readIss();
-    if (!playing || !issMode()) return;
+    const fix = hstMode() ? await readHst() : await readIss();
+    if (!playing || !orbitMode()) return;
     issSamples.push(fix);
     if (issSamples.length > 6) issSamples.splice(0, issSamples.length - 6);
     issStatus = '';
   } catch {
-    if (playing && issMode()) issStatus = 'ISSの位置を取得できません';
+    if (playing && orbitMode()) issStatus = `${craftLabel()}の位置を取得できません`;
   } finally {
     issFetching = false;
   }
@@ -283,7 +323,7 @@ async function refreshIss() {
 function observer() {
   const start = startLatLon();
   if (hereMode()) return start;
-  if (issMode()) return issHold || start;
+  if (orbitMode()) return issHold || start;
   return routePoint(start.lat, start.lon, Number(tiltEl.value), $('dir').value === 'west', fraction);
 }
 
@@ -298,7 +338,7 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 
 function worldTourMoved() {
   if (hereMode()) return false;
-  if (issMode()) return playing;
+  if (orbitMode()) return playing;
   const wrapped = ((fraction % 1) + 1) % 1;
   return playing || (wrapped > 1e-6 && wrapped < 1 - 1e-6);
 }
@@ -334,7 +374,7 @@ function flightLine() {
 }
 
 function skyDate() {
-  if (nowMode() || issMode()) return new Date();
+  if (nowMode() || orbitMode()) return new Date();
   const base = jstInputToDate(whenEl.value);
   if (!hereMode()) return base;
   return new Date(base.getTime() + fraction * 86400000);
@@ -462,7 +502,7 @@ function panBy(dx, dy) {
       centerAlt = 90;
       break;
     }
-    centerAlt = Math.max(-15, Math.min(90, alt));
+    centerAlt = Math.max(orbitMode() ? -60 : -15, Math.min(90, alt));
     centerAz = az;
   }
 }
@@ -506,11 +546,13 @@ function updateLabels() {
   $('japanPlace').hidden = kind !== 'japan';
   $('geoPlace').hidden = kind !== 'geo';
   const mode = playMode();
-  $('worldOpts').hidden = mode === 'here' || mode === 'iss';
+  const orbit = mode === 'ride' || mode === 'hst';
+  $('worldOpts').hidden = mode === 'here' || orbit;
   $('hereOpts').hidden = mode !== 'here';
-  $('whenBox').hidden = mode === 'now' || mode === 'iss';
+  $('whenBox').hidden = mode === 'now' || orbit;
   $('nowNote').hidden = mode !== 'now';
-  $('issNote').hidden = mode !== 'iss';
+  $('rideNote').hidden = mode !== 'ride';
+  $('hstNote').hidden = mode !== 'hst';
   $('whenLegend').textContent = mode === 'here' ? '始めの日時（日本時間）' : '固定する瞬間（日本時間）';
 }
 
@@ -520,17 +562,17 @@ function hud(here, utc) {
   const lap = !hereMode() && !nowMode() && fraction >= 1 && wrapped === 0
     ? 100
     : Math.round(wrapped * 100);
-  const tracking = issMode();
+  const tracking = orbitMode();
   const clock = nowMode() || tracking
     ? `現在 ${formatJst(utc)} 日本時間`
     : hereMode()
       ? `${formatJst(utc)} 日本時間`
       : `固定 ${formatJst(utc)} 日本時間`;
   const progress = tracking
-    ? (issStatus || (playing ? '直下を追跡中' : '停止中'))
+    ? (issStatus || (playing ? '周遊中' : '停止中'))
     : hereMode() ? `1日 ${lap}%` : `一周 ${lap}%`;
   hudText.textContent = [
-    tracking && issHold ? 'ISS直下' : placeName,
+    tracking && issHold ? (hstMode() ? 'HST周遊' : 'ISS周遊') : placeName,
     clock,
     `${formatLatLon(here.lat, here.lon)}  ${onLand ? '陸上' : '海上'}  現地 ${formatSolar(utc, here.lon)}`,
     `${progress}　月 ${Math.round(moon.illum * 100)}%`,
@@ -718,7 +760,16 @@ tiltEl.addEventListener('input', () => { updateLabels(); resetRoute(); saveSetti
 $('dir').addEventListener('change', () => { resetRoute(); saveSettings(); });
 minutesEl.addEventListener('change', saveSettings);
 dayMinutesEl.addEventListener('change', saveSettings);
-playModeEl.addEventListener('change', () => { updateLabels(); resetRoute(); saveSettings(); });
+let shownMode = playMode();
+playModeEl.addEventListener('change', () => {
+  const prev = shownMode;
+  updateLabels();
+  resetRoute();
+  saveSettings();
+  shownMode = playMode();
+  if (shownMode === 'ride' || shownMode === 'hst') lookSky(rideLookAlt(), centerAz);
+  else if (prev === 'ride' || prev === 'hst') lookSky(horizonAlt(), centerAz);
+});
 magEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 northEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 shadeEl.addEventListener('input', () => {
@@ -747,7 +798,7 @@ function togglePlay() {
   if (playing) {
     disableFaint();
     lastTick = 0;
-    if (issMode()) {
+    if (orbitMode()) {
       issSamples = [];
       issNextPoll = 0;
     }
@@ -757,6 +808,20 @@ function togglePlay() {
 }
 
 const LOOK_R = 32 * 1.28 * 1.28;
+
+function rideLookAlt() {
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(1, rect.width);
+  const h = Math.max(1, rect.height);
+  const focal = Math.max(w, h) / 2 / Math.tan(LOOK_R * Math.PI / 180);
+  const limb = earthLimbDeg(issHold && issHold.alt);
+  const sy = (h * (0.5 - 0.75)) / focal;
+  return Math.max(-60, Math.min(35, limb - Math.atan(sy) * 180 / Math.PI));
+}
+
+function levelAlt() {
+  return orbitMode() ? rideLookAlt() : horizonAlt();
+}
 
 function horizonAlt() {
   const rect = canvas.getBoundingClientRect();
@@ -930,13 +995,13 @@ $('zoomIn').addEventListener('click', () => setRadius(viewRadius * 0.72));
 $('zoomOut').addEventListener('click', () => setRadius(viewRadius * 1.28));
 $('homeView').addEventListener('click', () => {
   setWhen(new Date());
-  lookSky(horizonAlt(), 180);
+  lookSky(levelAlt(), 180);
 });
 $('zenith').addEventListener('click', () => lookSky(90, 0));
-$('lookN').addEventListener('click', () => lookSky(horizonAlt(), 0));
-$('lookE').addEventListener('click', () => lookSky(horizonAlt(), 90));
-$('lookS').addEventListener('click', () => lookSky(horizonAlt(), 180));
-$('lookW').addEventListener('click', () => lookSky(horizonAlt(), 270));
+$('lookN').addEventListener('click', () => lookSky(levelAlt(), 0));
+$('lookE').addEventListener('click', () => lookSky(levelAlt(), 90));
+$('lookS').addEventListener('click', () => lookSky(levelAlt(), 180));
+$('lookW').addEventListener('click', () => lookSky(levelAlt(), 270));
 function toggleFull() {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
   else document.exitFullscreen?.();
@@ -1251,14 +1316,18 @@ function frame(now) {
     const dt = lastTick ? Math.min(100, now - lastTick) : 0;
     lastTick = now;
     travelDt = dt;
-    if (issMode()) {
+    if (orbitMode()) {
       if (now >= issNextPoll) {
         issNextPoll = now + 4000;
         refreshIss();
       }
       const pos = issAt(Date.now());
       if (pos) {
-        issHold = { lat: pos.lat, lon: pos.lon };
+        issHold = {
+          lat: pos.lat,
+          lon: pos.lon,
+          alt: Number.isFinite(pos.alt) ? pos.alt : (hstMode() ? 540 : 420),
+        };
         pushIssTrail(issHold);
       }
     } else {
@@ -1324,14 +1393,18 @@ function frame(now) {
     moon,
     planets,
     meteors,
+    ride: orbitMode(),
+    lon: here.lon,
+    issAltKm: issHold && issHold.alt,
+    land,
   }) || layout;
   hud(here, utc);
   globe.draw({
     lat: here.lat,
     lon: here.lon,
-    route: hereMode() ? null : (issMode() ? (issTrail.length > 2 ? issTrail : null) : flightLine()),
+    route: hereMode() ? null : (orbitMode() ? (issTrail.length > 2 ? issTrail : null) : flightLine()),
     progress: fraction,
-    live: issMode(),
+    live: orbitMode(),
   });
   refreshStar(here.lat, lst, precessionMatrix(jd));
   updateFaintButton();
@@ -1359,7 +1432,7 @@ async function boot() {
   if (saved.placeName) placeName = saved.placeName;
   updateLabels();
   requestAnimationFrame(() => {
-    lookSky(horizonAlt(), 180);
+    lookSky(levelAlt(), 180);
     requestAnimationFrame(frame);
   });
 }
