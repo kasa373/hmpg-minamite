@@ -432,35 +432,38 @@ export function createRenderer(canvas) {
         return best.p ? best : null;
       }
 
-      const limbR = limbDeg * DEG + 0.004;
-      const earthSide = (p) => screenAlt(p.x, p.y) <= limbR;
+      const limbR = limbDeg * DEG - Math.max(0.002, (1.6 * dpr) / focal);
+      const earthSide = (p) => Number.isFinite(p.x) && Number.isFinite(p.y) && screenAlt(p.x, p.y) <= limbR;
       function strokeEarth(a, b) {
         const stack = [[a, b]];
+        const maxLen = 8 * dpr;
         while (stack.length) {
           const pair = stack.pop();
           const p = pair[0];
           const q = pair[1];
           const len = Math.hypot(q.x - p.x, q.y - p.y);
-          if (len < 0.75) continue;
-          if (len > 64 * dpr && stack.length < 500) {
-            const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+          if (len < 0.6) continue;
+          const pOk = earthSide(p);
+          const qOk = earthSide(q);
+          if (!pOk && !qOk) continue;
+          const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+          const midOk = earthSide(mid);
+          if ((len > maxLen || (pOk && qOk && !midOk)) && stack.length < 4000 && len > 1.2) {
             stack.push([p, mid], [mid, q]);
             continue;
           }
-          const pOk = earthSide(p);
-          const qOk = earthSide(q);
           if (pOk && qOk) {
+            if (!midOk) continue;
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
             continue;
           }
-          if (!pOk && !qOk) continue;
           const ground = pOk ? p : q;
           const sky = pOk ? q : p;
           let lo = 0;
           let hi = 1;
           let hit = ground;
-          for (let k = 0; k < 8; k++) {
+          for (let k = 0; k < 10; k++) {
             const t = (lo + hi) / 2;
             const m = { x: ground.x + (sky.x - ground.x) * t, y: ground.y + (sky.y - ground.y) * t };
             if (earthSide(m)) {
@@ -468,7 +471,7 @@ export function createRenderer(canvas) {
               lo = t;
             } else hi = t;
           }
-          if (Math.hypot(hit.x - ground.x, hit.y - ground.y) < 0.75) continue;
+          if (Math.hypot(hit.x - ground.x, hit.y - ground.y) < 0.6) continue;
           ctx.moveTo(ground.x, ground.y);
           ctx.lineTo(hit.x, hit.y);
         }

@@ -6,7 +6,7 @@ import {
 import { CITIES } from './cities.js';
 import { isLand, prepareLand } from './land.js';
 import { createGlobe } from './globe.js?v=19';
-import { createRenderer, decodeStars, earthLimbDeg, indexFaint } from './render.js?v=24';
+import { createRenderer, decodeStars, earthLimbDeg, indexFaint } from './render.js?v=25';
 
 const PREFS = [
   ['01', '北海道'], ['02', '青森県'], ['03', '岩手県'], ['04', '宮城県'],
@@ -867,7 +867,7 @@ function rideLookAlt() {
   const h = Math.max(1, rect.height);
   const focal = Math.max(w, h) / 2 / Math.tan(LOOK_R * Math.PI / 180);
   const limb = earthLimbDeg(issHold && issHold.alt);
-  const sy = (h * (0.5 - (1 - 1 / 5))) / focal;
+  const sy = (h * (0.5 - (1 - 1 / 6))) / focal;
   return Math.max(-60, Math.min(35, limb - Math.atan(sy) * 180 / Math.PI));
 }
 
