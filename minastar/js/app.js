@@ -6,7 +6,7 @@ import {
 import { CITIES } from './cities.js';
 import { isLand, prepareLand } from './land.js';
 import { createGlobe } from './globe.js?v=19';
-import { createRenderer, decodeStars, earthLimbDeg, indexFaint } from './render.js?v=25';
+import { createRenderer, decodeStars, earthLimbDeg, indexFaint } from './render.js?v=27';
 
 const PREFS = [
   ['01', '北海道'], ['02', '青森県'], ['03', '岩手県'], ['04', '宮城県'],
@@ -40,6 +40,7 @@ const whenEl = $('when');
 const tiltEl = $('tilt');
 const minutesEl = $('minutes');
 const dayMinutesEl = $('dayMinutes');
+const halleyMinutesEl = $('halleyMinutes');
 const spinMinutesEl = $('spinMinutes');
 const playModeEl = $('playMode');
 const magEl = $('mag');
@@ -118,10 +119,12 @@ prefEl.value = saved.pref || '13';
 magEl.value = saved.mag || '6';
 minutesEl.value = saved.minutes || '30';
 dayMinutesEl.value = saved.dayMinutes || '30';
+halleyMinutesEl.value = saved.halleyMinutes || '3';
+halleyMinutesEl.value = String(halleyMinutes());
 spinMinutesEl.value = saved.spinMinutes == null || saved.spinMinutes === '' ? '0' : saved.spinMinutes;
 spinMinutesEl.value = String(spinMinutes());
 const savedMode = saved.playMode === 'iss' ? 'ride' : saved.playMode;
-playModeEl.value = savedMode === 'here' || savedMode === 'now' || savedMode === 'ride' || savedMode === 'hst'
+playModeEl.value = savedMode === 'here' || savedMode === 'now' || savedMode === 'ride' || savedMode === 'hst' || savedMode === 'halley'
   ? savedMode
   : 'world';
 tiltEl.value = saved.tilt == null || saved.tilt === '' ? '-45' : saved.tilt;
@@ -163,6 +166,7 @@ function saveSettings() {
   localStorage.setItem('minastar-v1', JSON.stringify({
     lat: latEl.value, lon: lonEl.value, pref: prefEl.value, placeName,
     mag: magEl.value, minutes: minutesEl.value, dayMinutes: dayMinutesEl.value,
+    halleyMinutes: halleyMinutesEl.value,
     spinMinutes: spinMinutesEl.value,
     playMode: playModeEl.value, tilt: tiltEl.value,
     north: northEl.value, shade: shadeAutoEl.checked ? manualShade : shadeEl.value,
@@ -183,7 +187,7 @@ function startLatLon() {
 
 function playMode() {
   const mode = playModeEl.value;
-  return mode === 'here' || mode === 'now' || mode === 'ride' || mode === 'hst' ? mode : 'world';
+  return mode === 'here' || mode === 'now' || mode === 'ride' || mode === 'hst' || mode === 'halley' ? mode : 'world';
 }
 
 function hereMode() {
@@ -204,6 +208,83 @@ function hstMode() {
 
 function orbitMode() {
   return rideMode() || hstMode();
+}
+
+function halleyMode() {
+  return playMode() === 'halley';
+}
+
+const KANAZAWA = { lat: 36.5638, lon: 136.6596 };
+const HALLEY_HOURS = 24;
+
+function halleyStart() {
+  return new Date(Date.UTC(1835, 9, 23, 7, 0, 0));
+}
+
+function halleyMinutes() {
+  const n = Math.round(Number(halleyMinutesEl.value));
+  if (!Number.isFinite(n)) return 3;
+  return Math.max(1, Math.min(30, n));
+}
+
+function hmsDeg(h, m, s) {
+  return (h + m / 60 + s / 3600) * 15;
+}
+
+function dmsDeg(d, m, s) {
+  const sign = d < 0 || Object.is(d, -0) ? -1 : 1;
+  return sign * (Math.abs(d) + m / 60 + s / 3600);
+}
+
+// JPL Horizons apparent RA/Dec at Kanazawa, 1835-10-23 07:00 UT to 1835-10-24 07:00 UT, hourly.
+const HALLEY_RA = [
+  hmsDeg(17, 2, 32.27), hmsDeg(17, 2, 40.10), hmsDeg(17, 2, 47.89), hmsDeg(17, 2, 55.68),
+  hmsDeg(17, 3, 3.46), hmsDeg(17, 3, 11.24), hmsDeg(17, 3, 19.03), hmsDeg(17, 3, 26.83),
+  hmsDeg(17, 3, 34.62), hmsDeg(17, 3, 42.39), hmsDeg(17, 3, 50.14), hmsDeg(17, 3, 57.84),
+  hmsDeg(17, 4, 5.48), hmsDeg(17, 4, 13.04), hmsDeg(17, 4, 20.50), hmsDeg(17, 4, 27.85),
+  hmsDeg(17, 4, 35.08), hmsDeg(17, 4, 42.19), hmsDeg(17, 4, 49.18), hmsDeg(17, 4, 56.05),
+  hmsDeg(17, 5, 2.80), hmsDeg(17, 5, 9.45), hmsDeg(17, 5, 16.02), hmsDeg(17, 5, 22.52),
+  hmsDeg(17, 5, 28.96),
+];
+const HALLEY_DEC = [
+  dmsDeg(1, 9, 29.9), dmsDeg(1, 4, 43.2), dmsDeg(0, 59, 58.3), dmsDeg(0, 55, 15.2),
+  dmsDeg(0, 50, 34.0), dmsDeg(0, 45, 54.5), dmsDeg(0, 41, 16.9), dmsDeg(0, 36, 41.0),
+  dmsDeg(0, 32, 6.9), dmsDeg(0, 27, 34.5), dmsDeg(0, 23, 3.8), dmsDeg(0, 18, 34.9),
+  dmsDeg(0, 14, 7.6), dmsDeg(0, 9, 42.0), dmsDeg(0, 5, 18.1), dmsDeg(0, 0, 55.8),
+  dmsDeg(-0, 3, 24.9), dmsDeg(-0, 7, 44.0), dmsDeg(-0, 12, 1.5), dmsDeg(-0, 16, 17.5),
+  dmsDeg(-0, 20, 31.9), dmsDeg(-0, 24, 44.7), dmsDeg(-0, 28, 56.0), dmsDeg(-0, 33, 5.8),
+  dmsDeg(-0, 37, 14.1),
+];
+
+function halleyDate() {
+  const f = Math.max(0, Math.min(1, fraction));
+  return new Date(halleyStart().getTime() + f * HALLEY_HOURS * 3600000);
+}
+
+function cometNow(utc) {
+  const hours = (utc.getTime() - halleyStart().getTime()) / 3600000;
+  const span = HALLEY_RA.length - 1;
+  const x = Math.max(0, Math.min(span, hours));
+  const i = Math.floor(x);
+  const f = x - i;
+  const j = Math.min(span, i + 1);
+  return {
+    ra: HALLEY_RA[i] * (1 - f) + HALLEY_RA[j] * f,
+    dec: HALLEY_DEC[i] * (1 - f) + HALLEY_DEC[j] * f,
+    mag: 2.9,
+  };
+}
+
+function cometAltAz(utc) {
+  const c = cometNow(utc);
+  const jd = julianDate(utc);
+  const lst = gmstDeg(jd) + KANAZAWA.lon;
+  const h = apply3(horizontalMatrix(KANAZAWA.lat, lst), raDecToVec(c.ra, c.dec));
+  return {
+    ...c,
+    alt: Math.asin(Math.max(-1, Math.min(1, h[2]))) * 180 / Math.PI,
+    az: normDeg(Math.atan2(h[0], h[1]) * 180 / Math.PI),
+  };
 }
 
 function spinMinutes() {
@@ -354,6 +435,7 @@ async function refreshIss() {
 
 function observer() {
   const start = startLatLon();
+  if (halleyMode()) return KANAZAWA;
   if (hereMode()) return start;
   if (orbitMode()) return issHold || start;
   return routePoint(start.lat, start.lon, Number(tiltEl.value), $('dir').value === 'west', fraction);
@@ -369,7 +451,7 @@ function distanceKm(lat1, lon1, lat2, lon2) {
 }
 
 function worldTourMoved() {
-  if (hereMode()) return false;
+  if (hereMode() || halleyMode()) return false;
   if (orbitMode()) return playing;
   const wrapped = ((fraction % 1) + 1) % 1;
   return playing || (wrapped > 1e-6 && wrapped < 1 - 1e-6);
@@ -406,6 +488,7 @@ function flightLine() {
 }
 
 function skyDate() {
+  if (halleyMode()) return halleyDate();
   if (nowMode() || orbitMode()) return new Date();
   const base = jstInputToDate(whenEl.value);
   if (!hereMode()) return base;
@@ -594,18 +677,33 @@ function updateLabels() {
   $('geoPlace').hidden = kind !== 'geo';
   const mode = playMode();
   const orbit = mode === 'ride' || mode === 'hst';
-  $('worldOpts').hidden = mode === 'here' || orbit;
+  const halley = mode === 'halley';
+  $('worldOpts').hidden = mode === 'here' || halley || orbit;
   $('hereOpts').hidden = mode !== 'here';
-  $('whenBox').hidden = mode === 'now' || orbit;
+  $('halleyOpts').hidden = !halley;
+  $('whenBox').hidden = mode === 'now' || orbit || halley;
   $('nowNote').hidden = mode !== 'now';
   $('rideNote').hidden = mode !== 'ride';
   $('hstNote').hidden = mode !== 'hst';
+  $('halleyNote').hidden = !halley;
   $('orbitOpts').hidden = !orbit;
+  $('placeName').textContent = halley ? '金沢城下（固定）' : placeName;
   $('whenLegend').textContent = mode === 'here' ? '始めの日時（日本時間）' : '固定する瞬間（日本時間）';
 }
 
 function hud(here, utc) {
   const moon = moonRaDec(julianDate(utc));
+  if (halleyMode()) {
+    const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
+    const done = !playing && fraction >= 1;
+    hudText.textContent = [
+      '金沢城下',
+      `${formatJst(utc)} 日本時間`,
+      `${formatLatLon(here.lat, here.lon)}  陸上  現地 ${formatSolar(utc, here.lon)}`,
+      `${done ? '24日16時で終了' : `経過 ${pct}%`}　月 ${Math.round(moon.illum * 100)}%`,
+    ].join('\n');
+    return;
+  }
   const wrapped = ((fraction % 1) + 1) % 1;
   const lap = !hereMode() && !nowMode() && fraction >= 1 && wrapped === 0
     ? 100
@@ -808,6 +906,10 @@ tiltEl.addEventListener('input', () => { updateLabels(); resetRoute(); saveSetti
 $('dir').addEventListener('change', () => { resetRoute(); saveSettings(); });
 minutesEl.addEventListener('change', saveSettings);
 dayMinutesEl.addEventListener('change', saveSettings);
+halleyMinutesEl.addEventListener('change', () => {
+  halleyMinutesEl.value = String(halleyMinutes());
+  saveSettings();
+});
 let shownMode = playMode();
 playModeEl.addEventListener('change', () => {
   const prev = shownMode;
@@ -816,7 +918,10 @@ playModeEl.addEventListener('change', () => {
   saveSettings();
   shownMode = playMode();
   if (shownMode === 'ride' || shownMode === 'hst') lookSky(rideLookAlt(), centerAz);
-  else if (prev === 'ride' || prev === 'hst') lookSky(horizonAlt(), centerAz);
+  else if (shownMode === 'halley') {
+    const c = cometAltAz(skyDate());
+    lookSky(Math.max(12, Math.min(75, c.alt)), c.az);
+  } else if (prev === 'ride' || prev === 'hst' || prev === 'halley') lookSky(horizonAlt(), centerAz);
 });
 magEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
 northEl.addEventListener('input', () => { updateLabels(); saveSettings(); });
@@ -846,6 +951,7 @@ spinMinutesEl.addEventListener('change', () => {
 });
 
 function togglePlay() {
+  if (!playing && halleyMode() && fraction >= 1) fraction = 0;
   playing = !playing;
   if (playing) {
     disableFaint();
@@ -1334,10 +1440,11 @@ function openStar(hit) {
   const sub = [];
   if (hit.constellation) sub.push(`${hit.constellation}座`);
   if (hit.kind === 'planet') sub.push('惑星');
+  if (hit.kind === 'comet') sub.push('彗星');
   if (hit.color) sub.push(hit.color);
   $('starSub').textContent = sub.join(' · ');
   const rows = [];
-  if (hit.kind === 'star') rows.push(['等級', `${hit.mag.toFixed(1)}等`]);
+  if (hit.kind === 'star' || hit.kind === 'comet') rows.push(['等級', `${hit.mag.toFixed(1)}等`]);
   if (hit.kind === 'moon') rows.push(['明るさ', `${Math.round(hit.illum * 100)}%`]);
   rows.push(
     ['赤経', formatRa(hit.ra)],
@@ -1443,6 +1550,15 @@ function frame(now) {
         };
         pushIssTrail(issHold);
       }
+    } else if (halleyMode()) {
+      const step = dt / (halleyMinutes() * 60000);
+      if (fraction + step >= 1) {
+        fraction = 1;
+        playing = false;
+        lastTick = 0;
+        syncPlayButtons();
+        updateFaintButton();
+      } else fraction += step;
     } else {
       const minutes = hereMode()
         ? Math.max(1, Math.min(1440, Number(dayMinutesEl.value) || 30))
@@ -1506,6 +1622,7 @@ function frame(now) {
     sun: { ra: sun[0], dec: sun[1] },
     moon,
     planets,
+    comet: halleyMode() ? cometNow(utc) : null,
     meteors,
     ride: orbitMode(),
     lon: here.lon,
@@ -1516,7 +1633,7 @@ function frame(now) {
   globe.draw({
     lat: here.lat,
     lon: here.lon,
-    route: hereMode() ? null : (orbitMode() ? (issTrail.length > 2 ? issTrail : null) : flightLine()),
+    route: hereMode() || halleyMode() ? null : (orbitMode() ? (issTrail.length > 2 ? issTrail : null) : flightLine()),
     progress: fraction,
     live: orbitMode(),
   });
@@ -1546,7 +1663,10 @@ async function boot() {
   if (saved.placeName) placeName = saved.placeName;
   updateLabels();
   requestAnimationFrame(() => {
-    lookSky(levelAlt(), 180);
+    if (halleyMode()) {
+      const c = cometAltAz(skyDate());
+      lookSky(Math.max(12, Math.min(75, c.alt)), c.az);
+    } else lookSky(levelAlt(), 180);
     requestAnimationFrame(frame);
   });
 }

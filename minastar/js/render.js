@@ -742,6 +742,85 @@ export function createRenderer(canvas) {
       bodies.push({ ...sunP, kind: 'sun-label', label: '太陽' });
     }
 
+    function drawComet(comet) {
+      const headEq = raDecToVec(comet.ra, comet.dec);
+      const head = projectBody(headEq, true);
+      if (!head) return;
+      const sunEq = raDecToVec(state.sun.ra, state.sun.dec);
+      let ax = headEq[0] - sunEq[0];
+      let ay = headEq[1] - sunEq[1];
+      let az = headEq[2] - sunEq[2];
+      const along = ax * headEq[0] + ay * headEq[1] + az * headEq[2];
+      ax -= along * headEq[0];
+      ay -= along * headEq[1];
+      az -= along * headEq[2];
+      const alen = Math.hypot(ax, ay, az) || 1;
+      ax /= alen;
+      ay /= alen;
+      az /= alen;
+      const stepAway = (deg) => {
+        const a = deg * DEG;
+        return [
+          headEq[0] * Math.cos(a) + ax * Math.sin(a),
+          headEq[1] * Math.cos(a) + ay * Math.sin(a),
+          headEq[2] * Math.cos(a) + az * Math.sin(a),
+        ];
+      };
+      let tail = null;
+      let ang = 8;
+      for (let n = 0; n < 4 && !tail; n++) {
+        tail = projectBody(stepAway(ang), false);
+        if (!tail) ang *= 0.55;
+      }
+      if (tail) {
+        const spread = Math.max(10 * dpr, Math.min(36 * dpr, focal * Math.tan(0.55 * DEG)));
+        const nx = tail.y - head.y;
+        const ny = head.x - tail.x;
+        const nl = Math.hypot(nx, ny) || 1;
+        const ox = (nx / nl) * spread;
+        const oy = (ny / nl) * spread;
+        const fan = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
+        fan.addColorStop(0, 'rgba(255, 244, 214, 0.72)');
+        fan.addColorStop(0.28, 'rgba(255, 214, 150, 0.38)');
+        fan.addColorStop(1, 'rgba(255, 186, 110, 0)');
+        ctx.beginPath();
+        ctx.moveTo(head.x, head.y);
+        ctx.lineTo(tail.x + ox, tail.y + oy);
+        ctx.lineTo(tail.x - ox, tail.y - oy);
+        ctx.closePath();
+        ctx.fillStyle = fan;
+        ctx.fill();
+        const core = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
+        core.addColorStop(0, 'rgba(255, 252, 240, 0.95)');
+        core.addColorStop(0.4, 'rgba(255, 226, 170, 0.45)');
+        core.addColorStop(1, 'rgba(255, 210, 140, 0)');
+        ctx.beginPath();
+        ctx.moveTo(head.x, head.y);
+        ctx.lineTo(tail.x, tail.y);
+        ctx.strokeStyle = core;
+        ctx.lineWidth = Math.max(2.2 * dpr, spread * 0.28);
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+      const glow = Math.max(22 * dpr, Math.min(64 * dpr, focal * Math.tan(1.15 * DEG)));
+      const rg = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, glow);
+      rg.addColorStop(0, 'rgba(255, 253, 246, 0.98)');
+      rg.addColorStop(0.22, 'rgba(255, 228, 164, 0.72)');
+      rg.addColorStop(0.55, 'rgba(255, 196, 110, 0.22)');
+      rg.addColorStop(1, 'rgba(255, 180, 80, 0)');
+      ctx.beginPath();
+      ctx.fillStyle = rg;
+      ctx.arc(head.x, head.y, glow, 0, Math.PI * 2);
+      ctx.fill();
+      bodies.push({ ...head, kind: 'comet', label: 'ハレー彗星' });
+      bodyHits.push({
+        x: head.x, y: head.y, hit: 28, kind: 'comet', title: 'ハレー彗星',
+        ra: comet.ra, dec: comet.dec, mag: comet.mag, ofDate: true,
+      });
+    }
+
+    if (state.comet) drawComet(state.comet);
+
     ctx.font = `${Math.round(13 * dpr)}px "Yu Gothic UI", "Hiragino Sans", sans-serif`;
     ctx.fillStyle = 'rgba(214, 224, 240, 0.88)';
     ctx.textAlign = 'center';
@@ -768,6 +847,16 @@ export function createRenderer(canvas) {
     ctx.fillStyle = 'rgba(255, 228, 180, 0.95)';
     for (const b of bodies) {
       if (!b.label) continue;
+      if (b.kind === 'comet') {
+        ctx.font = `${Math.round(16 * dpr)}px "Yu Gothic UI", "Hiragino Sans", sans-serif`;
+        ctx.fillStyle = 'rgba(255, 236, 196, 0.98)';
+        ctx.textAlign = 'center';
+        ctx.fillText(b.label, b.x, b.y + 30 * dpr);
+        ctx.textAlign = 'left';
+        ctx.font = `${Math.round(13 * dpr)}px "Yu Gothic UI", "Hiragino Sans", sans-serif`;
+        ctx.fillStyle = 'rgba(255, 228, 180, 0.95)';
+        continue;
+      }
       ctx.fillText(b.label, b.x + 10 * dpr, b.y + 4 * dpr);
     }
 
